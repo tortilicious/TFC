@@ -1,7 +1,9 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization) // Para Ktor JSON
+    alias(libs.plugins.ksp) // Para Room
+    alias(libs.plugins.kotlin.compose.compiler)
 }
 
 android {
@@ -32,7 +34,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
@@ -40,20 +42,54 @@ android {
 }
 
 dependencies {
-
+    // Core AndroidX y Lifecycle
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
+
+    // Compose (BOM gestiona las versiones de las siguientes librerías de Compose)
+    implementation(platform(libs.androidx.compose.bom)) // Importante: Plataforma BOM
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.ui.tooling.preview) // Solo para Previews en el IDE
+    debugImplementation(libs.androidx.compose.ui.tooling) // Herramientas de Compose (Layout Inspector) solo en debug
+    //androidTestImplementation(platform(libs.androidx.compose.bom)) // BOM para tests si usas ui-test-junit4
+    //androidTestImplementation(libs.androidx.compose.ui.test.junit4) // Para tests de UI con Compose
+    //debugImplementation(libs.androidx.compose.ui.test.manifest) // Para tests de UI con Compose
+
+    // Lifecycle Compose Extensions (ViewModel y collectAsStateWithLifecycle)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+
+    // Navigation Compose
+    implementation(libs.androidx.navigation.compose)
+
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx) // Extensiones Kotlin para Room
+
+    ksp(libs.androidx.room.compiler) // Usa KSP para el compilador de Room
+
+    // Ktor (Cliente HTTP)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp) // Engine
+    implementation(libs.ktor.client.content.negotiation) // Para JSON/XML etc.
+    implementation(libs.ktor.serialization.kotlinx.json) // Serializador JSON
+    implementation(libs.kotlinx.serialization.json)      // Dependencia de kotlinx-serialization
+    implementation(libs.ktor.client.logging) // Opcional: para logs de Ktor
+
+    // Koin (Inyección de Dependencias)
+    implementation(platform(libs.koin.bom)) // Importante: Plataforma BOM
+    implementation(libs.koin.android)
+    implementation(libs.koin.androidx.compose)
+
+    // Coil (Carga de Imágenes en Compose)
+    implementation(libs.coil.compose)
+
+    // Testing
     testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
 }
