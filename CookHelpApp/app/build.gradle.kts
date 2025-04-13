@@ -55,9 +55,6 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui.tooling.preview) // Solo para Previews en el IDE
     debugImplementation(libs.androidx.compose.ui.tooling) // Herramientas de Compose (Layout Inspector) solo en debug
-    //androidTestImplementation(platform(libs.androidx.compose.bom)) // BOM para tests si usas ui-test-junit4
-    //androidTestImplementation(libs.androidx.compose.ui.test.junit4) // Para tests de UI con Compose
-    //debugImplementation(libs.androidx.compose.ui.test.manifest) // Para tests de UI con Compose
 
     // Lifecycle Compose Extensions (ViewModel y collectAsStateWithLifecycle)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -81,7 +78,7 @@ dependencies {
     implementation(libs.ktor.client.logging) // Opcional: para logs de Ktor
 
     // Koin (Inyección de Dependencias)
-    implementation(platform(libs.koin.bom)) // Importante: Plataforma BOM
+    implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
 
@@ -92,4 +89,5 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
 }
