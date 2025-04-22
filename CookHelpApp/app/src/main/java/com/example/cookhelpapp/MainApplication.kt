@@ -1,7 +1,9 @@
 package com.example.cookhelpapp
 
 import android.app.Application
-import com.example.cookhelpapp.di.moduloRed
+import com.example.cookhelpapp.di.dataModule
+import com.example.cookhelpapp.di.netw
+import com.example.cookhelpapp.di.networkModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -13,7 +15,7 @@ class MainApplication : Application() {
         startKoin {
             androidLogger()
             androidContext(this@MainApplication)
-            modules(moduloRed)
+            modules(dataModule)
         }
     }
 }
