@@ -8,7 +8,7 @@ import android.util.Log
 import com.example.cookhelpapp.data.remote.api.SpoonacularApiService
 import com.example.cookhelpapp.data.remote.dto.ComplexSearchResponseDto
 import com.example.cookhelpapp.data.remote.dto.FindByIngredientsDto
-import com.example.cookhelpapp.data.remote.dto.RecetaDetalleDto
+import com.example.cookhelpapp.data.remote.dto.RecipeDetailedDto
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -115,14 +115,14 @@ class RecipeRemoteDataSource(private val httpClient: HttpClient) : SpoonacularAp
      * Llama al endpoint /recipes/{id}/information.
      *
      * @param id El ID único de la receta.
-     * @return Un [Result] que contiene [RecetaDetalleDto] o un [Throwable].
+     * @return Un [Result] que contiene [RecipeDetailedDto] o un [Throwable].
      */
-    override suspend fun obtenerDetallesReceta(id: Int): Result<RecetaDetalleDto> {
+    override suspend fun obtenerDetallesReceta(id: Int): Result<RecipeDetailedDto> {
         return runCatching {
             // Log de depuración (o Información)
             Log.d(TAG, "Llamando a /recipes/$id/information")
 
-            val response: RecetaDetalleDto = httpClient.get {
+            val response: RecipeDetailedDto = httpClient.get {
                 url("/$id/information")
             }.body()
             response

@@ -3,9 +3,9 @@ package com.example.cookhelpapp.data.remote.dto
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class IngredienteInfoDto(
+data class IngredientInfoDto(
     val id: Int,
-    val amount: Double,
-    val unit: String,
-    val name: String
+    val name: String,
+    val amount: Double?,
+    val unit: String?
 )

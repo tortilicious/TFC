@@ -2,7 +2,7 @@ package com.example.cookhelpapp.data.remote.api
 
 import com.example.cookhelpapp.data.remote.dto.ComplexSearchResponseDto
 import com.example.cookhelpapp.data.remote.dto.FindByIngredientsDto
-import com.example.cookhelpapp.data.remote.dto.RecetaDetalleDto
+import com.example.cookhelpapp.data.remote.dto.RecipeDetailedDto
 
 /**
  * Define el contrato para interactuar con la API de Spoonacular.
@@ -50,7 +50,7 @@ interface SpoonacularApiService {
      * Obtiene detalles completos de una receta por su ID.
      * Llama al endpoint /recipes/{id}/information.
      * @param id El ID único de la receta.
-     * @return Un Result que encapsula RecetaDetalleDto o un Throwable.
+     * @return Un Result que encapsula RecipeDetailedDto o un Throwable.
      */
-    suspend fun obtenerDetallesReceta(id: Int): Result<RecetaDetalleDto>
+    suspend fun obtenerDetallesReceta(id: Int): Result<RecipeDetailedDto>
 }
