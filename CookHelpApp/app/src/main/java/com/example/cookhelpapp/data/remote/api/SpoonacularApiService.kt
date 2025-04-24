@@ -1,8 +1,10 @@
+// data/remote/api/SpoonacularApiService.kt
 package com.example.cookhelpapp.data.remote.api
 
 import com.example.cookhelpapp.data.remote.dto.ComplexSearchResponseDto
 import com.example.cookhelpapp.data.remote.dto.FindByIngredientsDto
 import com.example.cookhelpapp.data.remote.dto.RecipeDetailedDto
+import kotlin.Result
 
 /**
  * Define el contrato para interactuar con la API de Spoonacular.
@@ -13,37 +15,36 @@ interface SpoonacularApiService {
     /**
      * Busca recetas priorizando una lista de ingredientes.
      * Llama al endpoint /findByIngredients.
+     * Usa valores por defecto para number y offset si no se especifican.
      * @param includeIngredients Lista de ingredientes a usar (requerido).
-     * @param sortBy Criterio para ordenar/rankear (max-used o min-missing). Opcional.
+     * @param ranking Criterio numérico (1 para max-used, 2 para min-missing).
      * @param number Número máximo de resultados.
-     * @param offset Número de resultados a saltar (informativo, la API puede ignorarlo).
-     * @return Un Result que encapsula una Lista de FindByIngredientsItemDto o un Throwable.
+     * @param offset Número de resultados a saltar (la API /findByIngredients puede ignorarlo).
+     * @return Un Result que encapsula una Lista de FindByIngredientsDto o un Throwable.
      */
-    suspend fun buscarPorIngredientes(
+    suspend fun getRecipesByIngredients(
         includeIngredients: List<String>,
-        ranking: Int,           // 1 para max-used, 2 para min-missing
-        number: Int = 50,       // Número predeterminado máximo de resultados
-        offset: Int = 10        // Número de elementos a saltar (paginación)
+        ranking: Int,           // 1 o 2, sin valor por defecto, debe proporcionarse
+        number: Int = 50,       // Valor por defecto 50
+        offset: Int = 10        // Valor por defecto 10 (aunque la API lo ignore)
     ): Result<List<FindByIngredientsDto>>
 
     /**
-     * Realiza una búsqueda compleja de recetas con varios filtros y paginación.
+     * Realiza una búsqueda compleja de recetas con filtros opcionales.
      * Llama al endpoint /recipes/complexSearch.
-     * @param query Consulta de búsqueda general (opcional).
-     * @param includeIngredients Lista de ingredientes que deben estar (opcional).
-     * @param cuisine Filtro por tipo de cocina (opcional).
-     * @param diet Filtro por tipo de dieta (opcional).
-     * @param offset Número de resultados a saltar (paginación).
-     * @param number Número máximo de resultados a devolver.
+     * Usa valores por defecto para number y offset si no se especifican.
+     * @param includeIngredients Lista opcional de ingredientes que deben estar.
+     * @param cuisine Filtro opcional por tipo de cocina.
+     * @param number Número máximo de resultados.
+     * @param offset Número de resultados a saltar.
      * @return Un Result que encapsula ComplexSearchResponseDto o un Throwable.
      */
-    suspend fun buscarComplejo(
-        query: String? = null,
+    suspend fun complexSearchRecipes(
+        // query y diet eliminados
         includeIngredients: List<String>? = null,
         cuisine: String? = null,
-        diet: String? = null,
-        number: Int = 50,
-        offset: Int = 10
+        number: Int = 50, // Valor por defecto 50
+        offset: Int = 10  // Valor por defecto 10
     ): Result<ComplexSearchResponseDto>
 
     /**
@@ -52,5 +53,5 @@ interface SpoonacularApiService {
      * @param id El ID único de la receta.
      * @return Un Result que encapsula RecipeDetailedDto o un Throwable.
      */
-    suspend fun obtenerDetallesReceta(id: Int): Result<RecipeDetailedDto>
+    suspend fun fetchRecipeDetails(id: Int): Result<RecipeDetailedDto>
 }
