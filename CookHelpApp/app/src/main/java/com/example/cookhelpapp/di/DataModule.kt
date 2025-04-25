@@ -23,6 +23,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.singleOf
+import org.koin.dsl.bind
 import org.koin.dsl.module
 
 
@@ -112,9 +113,10 @@ val dataModule = module {
     // ======================================================
     /**
      * Proveedor Singleton para la interfaz [RecipeRepository].
-     * Koin creará una instancia de [RecipeRepositoryImpl] (la implementación)
-     * Koin inyecta las instancias de [RecipeRemoteDataSource], [LocalDataSource] y [CookAppDatabase]
+     * Koin creará una instancia de [RecipeRepositoryImpl] usando su constructor (singleOf)
+     * y la enlazará (bind) a la interfaz [RecipeRepository].
+     * Koin inyecta automáticamente las dependencias en el constructor de RecipeRepositoryImpl.
      */
-    singleOf(::RecipeRepositoryImpl)
+    singleOf(::RecipeRepositoryImpl) bind RecipeRepository::class
 
 }
