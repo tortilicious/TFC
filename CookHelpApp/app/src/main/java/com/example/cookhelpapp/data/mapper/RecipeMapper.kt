@@ -5,10 +5,12 @@ import com.example.cookhelpapp.data.local.entity.IngredientEntity
 import com.example.cookhelpapp.data.local.entity.RecipeEntity
 import com.example.cookhelpapp.data.local.pojo.IngredientUsageDetailsPojo
 import com.example.cookhelpapp.data.remote.dto.ComplexSearchItemDto
+import com.example.cookhelpapp.data.remote.dto.ComplexSearchResponseDto
 import com.example.cookhelpapp.data.remote.dto.FindByIngredientsDto
 import com.example.cookhelpapp.data.remote.dto.IngredientInfoDto
 import com.example.cookhelpapp.data.remote.dto.RecipeDetailedDto
 import com.example.cookhelpapp.domain.model.IngredientDetailed
+import com.example.cookhelpapp.domain.model.PagedResult
 import com.example.cookhelpapp.domain.model.RecipeDetailed
 import com.example.cookhelpapp.domain.model.RecipeSummary
 
@@ -24,6 +26,31 @@ import com.example.cookhelpapp.domain.model.RecipeSummary
  */
 
 
+
+
+// =============================================
+//  Mapeador para PagedResult<RecipeSummary> (Dominio)
+// =============================================
+
+/**
+ * Convierte un [ComplexSearchResponseDto] (respuesta completa de la API /complexSearch)
+ * en un [PagedResult]<[RecipeSummary]> (modelo de dominio paginado).
+ * Internamente, mapea la lista 'results' del DTO a una lista de [RecipeSummary]
+ * y copia los campos de paginación.
+ *
+ * @receiver El DTO de respuesta de la búsqueda compleja desde la API.
+ * @return El modelo de dominio [PagedResult] listo para ser usado por las capas superiores.
+ */
+fun ComplexSearchResponseDto.toPagedRecipeSummary(): PagedResult<RecipeSummary> {
+    return PagedResult(
+        items = results.map { it.toRecipeSummary() },
+        totalResults = totalResults,
+        offset = offset,
+        number = number
+    )
+}
+
+
 // ======================================
 //  Mapeadores hacia RecipeSummary (Dominio)
 // ======================================
@@ -36,9 +63,9 @@ import com.example.cookhelpapp.domain.model.RecipeSummary
  */
 fun ComplexSearchItemDto.toRecipeSummary(): RecipeSummary {
     return RecipeSummary(
-        id = this.id,
-        title = this.title,
-        imageUrl = this.image
+        id = id,
+        title = title,
+        imageUrl = image
     )
 }
 
@@ -50,9 +77,9 @@ fun ComplexSearchItemDto.toRecipeSummary(): RecipeSummary {
  */
 fun FindByIngredientsDto.toRecipeSummary(): RecipeSummary {
     return RecipeSummary(
-        id = this.id,
-        title = this.title,
-        imageUrl = this.imageUrl
+        id = id,
+        title = title,
+        imageUrl = imageUrl
     )
 }
 
@@ -64,9 +91,9 @@ fun FindByIngredientsDto.toRecipeSummary(): RecipeSummary {
  */
 fun RecipeEntity.toRecipeSummary(): RecipeSummary {
     return RecipeSummary(
-        id = this.id,
-        title = this.title,
-        imageUrl = this.imageUrl
+        id = id,
+        title = title,
+        imageUrl = imageUrl
     )
 }
 
@@ -83,15 +110,15 @@ fun RecipeEntity.toRecipeSummary(): RecipeSummary {
  */
 fun RecipeDetailedDto.toRecipeDetailed(): RecipeDetailed {
     return RecipeDetailed(
-        id = this.id,
-        title = this.title,
-        imageUrl = this.imageUrl, // DTO usa 'image'
-        cuisines = this.cuisines,
-        instructions = this.instructions,
-        readyInMinutes = this.readyInMinutes,
-        servings = this.servings,
+        id = id,
+        title = title,
+        imageUrl = imageUrl, // DTO usa 'image'
+        cuisines = cuisines,
+        instructions = instructions,
+        readyInMinutes = readyInMinutes,
+        servings = servings,
         // Mapea la lista de DTOs de ingredientes a la lista de dominio usando otro mapper.
-        ingredients = this.ingredients.map { it.toIngredientDetailed() }
+        ingredients = ingredients.map { it.toIngredientDetailed() }
     )
 }
 
@@ -104,13 +131,13 @@ fun RecipeDetailedDto.toRecipeDetailed(): RecipeDetailed {
  */
 fun RecipeEntity.toRecipeDetailed(ingredientPojos: List<IngredientUsageDetailsPojo>): RecipeDetailed {
     return RecipeDetailed(
-        id = this.id,
-        title = this.title,
-        imageUrl = this.imageUrl,
-        cuisines = this.cuisines,
-        instructions = this.instructions,
-        readyInMinutes = this.readyInMinutes,
-        servings = this.servings,
+        id = id,
+        title = title,
+        imageUrl = imageUrl,
+        cuisines = cuisines,
+        instructions = instructions,
+        readyInMinutes = readyInMinutes,
+        servings = servings,
         // Mapea la lista de POJOs (pasada como parámetro) a IngredienteDetalle usando otro mapper.
         ingredients = ingredientPojos.map { it.toIngredientDetailed() }
     )
@@ -128,10 +155,10 @@ fun RecipeEntity.toRecipeDetailed(ingredientPojos: List<IngredientUsageDetailsPo
  */
 fun IngredientUsageDetailsPojo.toIngredientDetailed(): IngredientDetailed {
     return IngredientDetailed(
-        id = this.ingredientId,
-        name = this.ingredientName,
-        amount = this.amount,
-        unit = this.unit,
+        id = ingredientId,
+        name = ingredientName,
+        amount = amount,
+        unit = unit,
     )
 }
 
@@ -143,12 +170,13 @@ fun IngredientUsageDetailsPojo.toIngredientDetailed(): IngredientDetailed {
  */
 fun IngredientInfoDto.toIngredientDetailed(): IngredientDetailed {
     return IngredientDetailed(
-        id = this.id, // Recuerda que este ID puede ser null
-        name = this.name,
-        amount = this.amount,
-        unit = this.unit,
+        id = id,
+        name = name,
+        amount = amount,
+        unit = unit,
     )
 }
+
 
 
 // =============================================
@@ -164,13 +192,13 @@ fun IngredientInfoDto.toIngredientDetailed(): IngredientDetailed {
  */
 fun RecipeDetailed.toRecipeEntity(): RecipeEntity {
     return RecipeEntity(
-        id = this.id,
-        title = this.title,
-        imageUrl = this.imageUrl,
-        cuisines = this.cuisines,
-        instructions = this.instructions,
-        readyInMinutes = this.readyInMinutes,
-        servings = this.servings
+        id = id,
+        title = title,
+        imageUrl = imageUrl,
+        cuisines = cuisines,
+        instructions = instructions,
+        readyInMinutes = readyInMinutes,
+        servings = servings
     )
 }
 
@@ -185,9 +213,9 @@ fun RecipeDetailed.toRecipeEntity(): RecipeEntity {
 fun IngredientDetailed.toAuxRecipeIngredientEntity(recipeId: Int): AuxRecipeIngredientEntity {
     return AuxRecipeIngredientEntity(
         recipeId = recipeId,
-        ingredientId = this.id,
-        amount = this.amount,
-        unit = this.unit
+        ingredientId = id,
+        amount = amount,
+        unit = unit
     )
 }
 
@@ -199,8 +227,8 @@ fun IngredientDetailed.toAuxRecipeIngredientEntity(recipeId: Int): AuxRecipeIngr
  */
 fun IngredientDetailed.toIngredientEntity(): IngredientEntity {
     return IngredientEntity(
-        id = this.id,
-        name = this.name
+        id = id,
+        name = name
     )
 }
 

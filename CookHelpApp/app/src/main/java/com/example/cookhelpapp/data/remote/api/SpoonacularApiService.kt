@@ -25,7 +25,7 @@ interface SpoonacularApiService {
         includeIngredients: List<String>,
         ranking: Int,           // 1 o 2, sin valor por defecto, debe proporcionarse
         number: Int = 20,
-        offset: Int = 10
+        offset: Int = 0
     ): Result<List<FindByIngredientsDto>>
 
     /**
@@ -43,7 +43,7 @@ interface SpoonacularApiService {
         includeIngredients: List<String>? = null,
         cuisine: String? = null,
         number: Int = 20,
-        offset: Int = 10
+        offset: Int = 0
     ): Result<ComplexSearchResponseDto>
 
     /**

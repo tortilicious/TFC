@@ -1,30 +1,25 @@
 package com.example.cookhelpapp.di
 
-// --- Imports ---
-// Koin
 
-// Ktor
-
-// Room
-
-// Capa Remota
-
-// Repositorio
 import androidx.room.Room
 import com.example.cookhelpapp.data.local.datasource.RecipeLocalDataSource
 import com.example.cookhelpapp.data.local.db.CookAppDatabase
 import com.example.cookhelpapp.data.remote.api.SpoonacularApiService
 import com.example.cookhelpapp.data.remote.datasource.RecipeRemoteDataSource
-import com.example.cookhelpapp.domain.repository.RecipeRepository
 import com.example.cookhelpapp.data.repository.RecipeRepositoryImpl
-import io.ktor.client.*
-import io.ktor.client.engine.okhttp.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
+import com.example.cookhelpapp.domain.repository.RecipeRepository
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.DefaultRequest
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.logging.DEFAULT
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
+import io.ktor.http.URLProtocol
+import io.ktor.http.path
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
@@ -54,9 +49,7 @@ val dataModule = module {
             // Plugin para Logging
             install(Logging) {
                 logger = Logger.DEFAULT         // Usa el logger Logcat de Android por defecto
-                // IMPORTANTE: Considera cambiar a NONE/INFO en Release si no usas Timber
-                level =
-                    LogLevel.ALL            // Mostrar todos los logs para ayudar en la depuración
+                level = LogLevel.ALL            // Mostrar todos los logs para ayudar en la depuración
             }
 
             //  Agregamos timeouts para las peticiones para evitar que se queden colgadas indefinidamente
@@ -129,4 +122,4 @@ val dataModule = module {
         )
     }
 
-} // Fin del dataModule
+}

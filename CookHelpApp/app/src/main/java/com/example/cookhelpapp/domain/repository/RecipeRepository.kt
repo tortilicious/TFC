@@ -22,8 +22,8 @@ interface RecipeRepository {
     suspend fun searchComplexRecipes(
         includeIngredients: List<String>? = null,
         cuisine: String? = null,
-        number: Int,
-        offset: Int
+        number: Int = 20,
+        offset: Int = 0
     ): Result<List<RecipeSummary>>
 
     /**
@@ -38,9 +38,9 @@ interface RecipeRepository {
     suspend fun searchRecipesByIngredients(
         includeIngredients: List<String>,
         ranking: Int,
-        number: Int,
-        offset: Int
-    ): Result<List<RecipeSummary>> // Devuelve Dominio
+        number: Int = 20,
+        offset: Int = 0
+    ): Result<List<RecipeSummary>>
 
     /**
      * Obtiene los detalles completos de una receta, prioritariamente desde la API.
