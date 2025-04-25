@@ -11,5 +11,5 @@ data class FindByIngredientsDto(
     @SerialName("image")
     val imageUrl: String?,
     val missedIngredientCount: Int,
-    val missedIngredients: List<IngredientInfoDto> = emptyList()
+    val missedIngredients: List<IngredientInfoDto> = mutableListOf()
 )

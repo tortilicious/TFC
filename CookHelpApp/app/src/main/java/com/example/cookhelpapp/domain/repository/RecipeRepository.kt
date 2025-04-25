@@ -10,36 +10,28 @@ import kotlinx.coroutines.flow.Flow
 interface RecipeRepository {
 
     /**
-     * Realiza una búsqueda compleja en la fuente de datos remota (API).
+     * Realiza una búsqueda compleja en la API remota.
      *
-     * @param includeIngredients Lista opcional de ingredientes a incluir.
-     * @param cuisine Filtro opcional por cocina.
-     * @param offset Paginación: número de resultados a saltar.
-     * @param number Paginación: número de resultados a devolver.
-     * @return Un [Result] que contiene una [List] de [RecipeSummary] en caso de éxito,
-     * o un [Throwable] en caso de error.
+     * @param offset Paginación: número de resultados a saltar (default 0).
+     * @param number Paginación: número de resultados a devolver (default 20).
+     * @return Un [Result] que contiene [List]<[RecipeSummary]> o un [Throwable].
      */
     suspend fun searchComplexRecipes(
         includeIngredients: List<String>? = null,
         cuisine: String? = null,
-        number: Int = 20,
-        offset: Int = 0
+        offset: Int = 0,
+        number: Int = 20
     ): Result<List<RecipeSummary>>
 
     /**
-     * Realiza una búsqueda por ingredientes en la API.
-     *
-     * @param includeIngredients Lista de ingredientes (requerido).
-     * @param ranking Criterio de ordenación (1: max-used, 2: min-missing).
-     * @param number Número de resultados.
-     * @return Un [Result] que contiene una [List] de [RecipeSummary] en caso de éxito,
-     * o un [Throwable] en caso de error.
+     * Realiza una búsqueda por ingredientes en la API remota.
+     * @return Result con la lista simple de RecipeSummary o un error.
      */
     suspend fun searchRecipesByIngredients(
         includeIngredients: List<String>,
         ranking: Int,
-        number: Int = 20,
-        offset: Int = 0
+        offset: Int = 0,
+        number: Int = 20
     ): Result<List<RecipeSummary>>
 
     /**

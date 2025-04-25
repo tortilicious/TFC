@@ -16,7 +16,7 @@ class SearchComplexRecipesUseCase(
     /**
      * Ejecuta la búsqueda compleja.
      * @param includeIngredients Lista opcional de ingredientes.
-     * @param cuisine Filtro opcional por cocina.
+     * @param cuisine Filtro opcional por tipo de cocina.
      * @param offset Paginación: inicio.
      * @param number Paginación: cantidad.
      * @return Un [Result] con la lista de [RecipeSummary] o un error.
@@ -24,7 +24,9 @@ class SearchComplexRecipesUseCase(
     suspend operator fun invoke(
         includeIngredients: List<String>? = null,
         cuisine: String? = null,
+        offset: Int = 0,
+        number: Int = 20
     ): Result<List<RecipeSummary>> {
-        return repository.searchComplexRecipes(includeIngredients, cuisine)
+        return repository.searchComplexRecipes(includeIngredients, cuisine, offset, number)
     }
 }

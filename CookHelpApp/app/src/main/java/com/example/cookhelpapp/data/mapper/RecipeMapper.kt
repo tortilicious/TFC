@@ -10,7 +10,6 @@ import com.example.cookhelpapp.data.remote.dto.FindByIngredientsDto
 import com.example.cookhelpapp.data.remote.dto.IngredientInfoDto
 import com.example.cookhelpapp.data.remote.dto.RecipeDetailedDto
 import com.example.cookhelpapp.domain.model.IngredientDetailed
-import com.example.cookhelpapp.domain.model.PagedResult
 import com.example.cookhelpapp.domain.model.RecipeDetailed
 import com.example.cookhelpapp.domain.model.RecipeSummary
 
@@ -25,30 +24,6 @@ import com.example.cookhelpapp.domain.model.RecipeSummary
  * que usa la lógica de la aplicación y la UI.
  */
 
-
-
-
-// =============================================
-//  Mapeador para PagedResult<RecipeSummary> (Dominio)
-// =============================================
-
-/**
- * Convierte un [ComplexSearchResponseDto] (respuesta completa de la API /complexSearch)
- * en un [PagedResult]<[RecipeSummary]> (modelo de dominio paginado).
- * Internamente, mapea la lista 'results' del DTO a una lista de [RecipeSummary]
- * y copia los campos de paginación.
- *
- * @receiver El DTO de respuesta de la búsqueda compleja desde la API.
- * @return El modelo de dominio [PagedResult] listo para ser usado por las capas superiores.
- */
-fun ComplexSearchResponseDto.toPagedRecipeSummary(): PagedResult<RecipeSummary> {
-    return PagedResult(
-        items = results.map { it.toRecipeSummary() },
-        totalResults = totalResults,
-        offset = offset,
-        number = number
-    )
-}
 
 
 // ======================================
@@ -176,7 +151,6 @@ fun IngredientInfoDto.toIngredientDetailed(): IngredientDetailed {
         unit = unit,
     )
 }
-
 
 
 // =============================================

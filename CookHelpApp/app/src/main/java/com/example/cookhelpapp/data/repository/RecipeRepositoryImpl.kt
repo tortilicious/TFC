@@ -76,9 +76,9 @@ class RecipeRepositoryImpl(
     ): Result<List<RecipeSummary>> {
         Log.d(TAG, "Repo: Iniciando búsqueda por ingredientes (API)...")
         return remoteDataSource.getRecipesByIngredients(includeIngredients, ranking)
-            .mapCatching { dtoList -> // dtoList es List<FindByIngredientsDto>
-                Log.d(TAG, "Repo: Éxito búsqueda por ingredientes. Mapeando ${dtoList.size} DTOs a RecipeSummary.")
-                dtoList.map { it.toRecipeSummary() }
+            .mapCatching { findByIngredientsRecipeList -> // dtoList es List<FindByIngredientsDto>
+                Log.d(TAG, "Repo: Éxito búsqueda por ingredientes. Mapeando ${findByIngredientsRecipeList.size} DTOs a RecipeSummary.")
+                findByIngredientsRecipeList.map { it.toRecipeSummary() }
             }
             .onFailure { e -> Log.e(TAG, "Repo: Error en búsqueda por ingredientes", e) }
     }
@@ -160,8 +160,7 @@ class RecipeRepositoryImpl(
     override suspend fun addFavorite(recipe: RecipeDetailed): Result<Unit> { // Expects Result<Unit>
         Log.d(TAG, "Repo: Solicitud para agregar favorito ID: ${recipe.id}")
         // Usamos runCatching para manejar cualquier excepción durante el mapeo o la transacción BD.
-        return runCatching { // runCatching returns Result<TypeOfLastExpressionInLambda>
-            // 1. Mapear Modelo de Dominio -> Entidades de Room
+        return runCatching {
             Log.d(TAG, "Repo: Mapeando RecipeDetailed a Entities para ID: ${recipe.id}")
             val recipeEntity = recipe.toRecipeEntity()
             val ingredientEntities = recipe.ingredients.map { it.toIngredientEntity() }

@@ -22,6 +22,7 @@ import io.ktor.http.path
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 
 
@@ -59,7 +60,7 @@ val dataModule = module {
                 socketTimeoutMillis = 20_000    // Timeout específico entre paquetes (lectura/escritura) (20s)
             }
 
-            // Plugin para configurar peticiones por defecto (Exactamente como lo pediste)
+            // Plugin para configurar peticiones por defecto
             install(DefaultRequest) {
                 url {
                     protocol = URLProtocol.HTTPS
@@ -71,12 +72,7 @@ val dataModule = module {
         }
     }
 
-    /**
-     * Proveedor Singleton para la interfaz SpoonacularApiService.
-     */
-    single<SpoonacularApiService> {
-        RecipeRemoteDataSource(httpClient = get())
-    }
+
 
 
     // ==================================================
@@ -99,27 +95,26 @@ val dataModule = module {
     // ==================================================
     // Sección: Configuración de DataSources
     // ==================================================
-    single {
-        RecipeLocalDataSource(
-            recipeDao = get(),
-            ingredientDao = get()
-        )
-    }
+    /**
+     * Proveedor Singleton para [RecipeLocalDataSource].
+     * Koin inyecta las instancias de [RecipeDao] e [IngredientDao]
+     */
+    singleOf(::RecipeLocalDataSource)
 
-    single {
-        RecipeRemoteDataSource(httpClient = get())
-    }
+    /**
+     * Proveedor Singleton para la implementación concreta [RecipeRemoteDataSource].
+     */
+    singleOf(::RecipeRemoteDataSource)
 
 
     // ======================================================
     // Sección: Configuración del Repositorio (Capa de Datos)
     // ======================================================
-    single<RecipeRepository> {
-        RecipeRepositoryImpl(
-            remoteDataSource = get(),
-            localDataSource = get(),
-            database = get()
-        )
-    }
+    /**
+     * Proveedor Singleton para la interfaz [RecipeRepository].
+     * Koin creará una instancia de [RecipeRepositoryImpl] (la implementación)
+     * Koin inyecta las instancias de [RecipeRemoteDataSource], [LocalDataSource] y [CookAppDatabase]
+     */
+    singleOf(::RecipeRepositoryImpl)
 
 }

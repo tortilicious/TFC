@@ -39,28 +39,20 @@ class RecipeRemoteDataSource(private val httpClient: HttpClient) : SpoonacularAp
         offset: Int
     ): Result<List<FindByIngredientsDto>> {
         require(ranking == 1 || ranking == 2) { "Ranking debe ser 1 o 2. Recibido: $ranking" }
-        if (includeIngredients.isEmpty()) {
-            Log.w(TAG, "getRecipesByIngredients llamada con lista de ingredientes vacía.")
-            return Result.failure(IllegalArgumentException("La lista de ingredientes no puede estar vacía."))
-        }
-        val ingredientsString = includeIngredients.joinToString(",")
-
         return runCatching {
-            Log.d(
-                TAG,
-                "Llamando a /findByIngredients: ingredients='$ingredientsString', ranking=$ranking, number=$number"
-            )
-
+            Log.d(TAG, "Llamando a /findByIngredients")
             val response: List<FindByIngredientsDto> = httpClient.get {
+                if (includeIngredients.isNotEmpty()) parameter(
+                    "includeIngredients",
+                    includeIngredients.joinToString(",")
+                )
                 url("findByIngredients")
-                parameter("ingredients", ingredientsString)
+                parameter("ingredients", includeIngredients)
                 parameter("number", number)
                 parameter("ranking", ranking)
             }.body()
             response
-        }.onFailure { e ->
-            Log.e(TAG, "Error en API /findByIngredients. Ingredientes: $ingredientsString", e)
-        }
+        }.onFailure { e -> Log.e(TAG, "Error en API /findByIngredients.", e) }
     }
 
     /**
@@ -76,13 +68,9 @@ class RecipeRemoteDataSource(private val httpClient: HttpClient) : SpoonacularAp
 
         return runCatching {
             Log.d(TAG, "Llamando a /recipes/complexSearch")
-
             val response: ComplexSearchResponseDto = httpClient.get {
                 url("/complexSearch")
-                if (!includeIngredients.isNullOrEmpty()) parameter(
-                    "includeIngredients",
-                    includeIngredients.joinToString(",")
-                )
+                if (!includeIngredients.isNullOrEmpty()) parameter("includeIngredients", includeIngredients.joinToString(","))
                 if (!cuisine.isNullOrBlank()) parameter("cuisine", cuisine)
                 // Parámetros de paginación (usan el valor recibido, que será el default si no se especificó otro)
                 parameter("offset", offset)

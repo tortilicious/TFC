@@ -9,7 +9,7 @@ data class RecipeDetailedDto(
     val title: String,
     @SerialName("image")
     val imageUrl: String?,
-    val cuisines: List<String> = emptyList(),
+    val cuisines: List<String> = mutableListOf(),
     @SerialName("extendedIngredients")
     val ingredients: List<IngredientInfoDto>,
     val instructions: String?,
