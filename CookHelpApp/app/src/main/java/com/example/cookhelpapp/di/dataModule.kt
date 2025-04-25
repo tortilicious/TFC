@@ -2,10 +2,21 @@ package com.example.cookhelpapp.di
 
 // --- Imports ---
 // Koin
-import org.koin.dsl.module
-import org.koin.android.ext.koin.androidContext
 
 // Ktor
+
+// Room
+
+// Capa Remota
+
+// Repositorio
+import androidx.room.Room
+import com.example.cookhelpapp.data.local.datasource.RecipeLocalDataSource
+import com.example.cookhelpapp.data.local.db.CookAppDatabase
+import com.example.cookhelpapp.data.remote.api.SpoonacularApiService
+import com.example.cookhelpapp.data.remote.datasource.RecipeRemoteDataSource
+import com.example.cookhelpapp.domain.repository.RecipeRepository
+import com.example.cookhelpapp.data.repository.RecipeRepositoryImpl
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
@@ -15,22 +26,8 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
-import java.util.concurrent.TimeUnit
-
-// Room
-import androidx.room.Room
-import com.example.cookhelpapp.data.local.db.Converters
-import com.example.cookhelpapp.data.local.db.CookAppDatabase
-import com.example.cookhelpapp.data.local.datasource.RecipeLocalDataSource
-
-// Capa Remota
-import com.example.cookhelpapp.data.remote.api.SpoonacularApiService
-import com.example.cookhelpapp.data.remote.datasource.RecipeRemoteDataSource
-
-// Repositorio
-import com.example.cookhelpapp.data.repository.RecipeRepositoryImpl
-import com.example.cookhelpapp.domain.repository.RecipeRepository
-import org.koin.core.module.dsl.singleOf
+import org.koin.android.ext.koin.androidContext
+import org.koin.dsl.module
 
 
 val dataModule = module {
@@ -66,8 +63,7 @@ val dataModule = module {
             install(HttpTimeout) {
                 requestTimeoutMillis = 30_000   // Timeout total para toda la petición (30s)
                 connectTimeoutMillis = 15_000   // Timeout específico para conectar (15s)
-                socketTimeoutMillis =
-                    20_000    // Timeout específico entre paquetes (lectura/escritura) (20s)
+                socketTimeoutMillis = 20_000    // Timeout específico entre paquetes (lectura/escritura) (20s)
             }
 
             // Plugin para configurar peticiones por defecto (Exactamente como lo pediste)
@@ -108,7 +104,7 @@ val dataModule = module {
 
 
     // ==================================================
-    // Sección: Configuración de DataSources Locales
+    // Sección: Configuración de DataSources
     // ==================================================
     single {
         RecipeLocalDataSource(
@@ -117,14 +113,19 @@ val dataModule = module {
         )
     }
 
+    single {
+        RecipeRemoteDataSource(httpClient = get())
+    }
+
 
     // ======================================================
     // Sección: Configuración del Repositorio (Capa de Datos)
     // ======================================================
     single<RecipeRepository> {
         RecipeRepositoryImpl(
-            apiService = get(),
-            localDataSource = get()
+            remoteDataSource = get(),
+            localDataSource = get(),
+            database = get()
         )
     }
 

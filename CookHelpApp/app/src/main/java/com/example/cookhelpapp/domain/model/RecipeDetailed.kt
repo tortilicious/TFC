@@ -1,6 +1,6 @@
 package com.example.cookhelpapp.domain.model
 
-data class RecipeDetailed (
+data class RecipeDetailed(
     val id: Int,
     val title: String,
     val imageUrl: String?,
@@ -8,5 +8,5 @@ data class RecipeDetailed (
     val readyInMinutes: Int?,
     val servings: Int?,
     val cuisines: List<String>?,
-    val ingredients: List<IngredientDetailed> // Lista de ingredientes para ESTA receta
+    val ingredients: List<IngredientDetailed>
 )

@@ -38,7 +38,7 @@ interface RecipeDao {
      * @param id ID de la receta a buscar.
      */
     @Query("SELECT * FROM recipes WHERE id = :id")
-    fun getRecipeById(id: Int): Flow<RecipeEntity?>
+    fun getRecipeById(id: Int): Flow<RecipeEntity>
 
 
     /**

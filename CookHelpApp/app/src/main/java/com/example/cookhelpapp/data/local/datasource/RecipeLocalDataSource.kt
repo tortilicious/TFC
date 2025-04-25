@@ -82,10 +82,7 @@ class RecipeLocalDataSource(
      * @param ingredients Lista de IngredientEntity a insertar.
      */
     suspend fun insertIngredients(ingredients: List<IngredientEntity>) {
-        Log.d(
-            TAG,
-            "Intentando insertar ${ingredients.size} ingredientes maestros (ignorando duplicados)"
-        )
+        Log.d(TAG, "Intentando insertar ${ingredients.size} ingredientes maestros (ignorando duplicados)")
         ingredientDao.insertAllIngredients(ingredients)
     }
 
@@ -96,10 +93,7 @@ class RecipeLocalDataSource(
      */
     suspend fun insertRecipeRelations(relations: List<AuxRecipeIngredientEntity>) {
         if (relations.isNotEmpty()) {
-            Log.d(
-                TAG,
-                "Insertando/reemplazando ${relations.size} relaciones para receta ID: ${relations.first().recipeId}"
-            )
+            Log.d(TAG, "Insertando/reemplazando ${relations.size} relaciones para receta ID: ${relations.first().recipeId}")
             recipeDao.insertAllAuxRelations(relations)
         } else {
             Log.d(TAG, "No hay relaciones para insertar.")

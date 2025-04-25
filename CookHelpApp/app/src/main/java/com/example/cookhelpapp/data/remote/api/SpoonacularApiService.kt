@@ -4,7 +4,6 @@ package com.example.cookhelpapp.data.remote.api
 import com.example.cookhelpapp.data.remote.dto.ComplexSearchResponseDto
 import com.example.cookhelpapp.data.remote.dto.FindByIngredientsDto
 import com.example.cookhelpapp.data.remote.dto.RecipeDetailedDto
-import kotlin.Result
 
 /**
  * Define el contrato para interactuar con la API de Spoonacular.
@@ -25,8 +24,8 @@ interface SpoonacularApiService {
     suspend fun getRecipesByIngredients(
         includeIngredients: List<String>,
         ranking: Int,           // 1 o 2, sin valor por defecto, debe proporcionarse
-        number: Int = 50,       // Valor por defecto 50
-        offset: Int = 10        // Valor por defecto 10 (aunque la API lo ignore)
+        number: Int = 20,
+        offset: Int = 10
     ): Result<List<FindByIngredientsDto>>
 
     /**
@@ -43,8 +42,8 @@ interface SpoonacularApiService {
         // query y diet eliminados
         includeIngredients: List<String>? = null,
         cuisine: String? = null,
-        number: Int = 50, // Valor por defecto 50
-        offset: Int = 10  // Valor por defecto 10
+        number: Int = 20,
+        offset: Int = 10
     ): Result<ComplexSearchResponseDto>
 
     /**

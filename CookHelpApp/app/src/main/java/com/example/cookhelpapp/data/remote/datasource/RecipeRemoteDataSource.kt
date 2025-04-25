@@ -1,18 +1,19 @@
 package com.example.cookhelpapp.data.remote.datasource
 
 // Importa los DTOs y la interfaz actualizada
+// Ktor y otros imports
+// Log estándar de Android
+// Result de Kotlin
+import android.util.Log
 import com.example.cookhelpapp.data.remote.api.SpoonacularApiService
 import com.example.cookhelpapp.data.remote.dto.ComplexSearchResponseDto
 import com.example.cookhelpapp.data.remote.dto.FindByIngredientsDto
 import com.example.cookhelpapp.data.remote.dto.RecipeDetailedDto
-// Ktor y otros imports
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.request.*
-// Log estándar de Android
-import android.util.Log
-// Result de Kotlin
-import kotlin.Result
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import io.ktor.client.request.parameter
+import io.ktor.client.request.url
 
 /**
  * Implementación concreta de SpoonacularApiService.
@@ -45,7 +46,10 @@ class RecipeRemoteDataSource(private val httpClient: HttpClient) : SpoonacularAp
         val ingredientsString = includeIngredients.joinToString(",")
 
         return runCatching {
-            Log.d(TAG, "Llamando a /findByIngredients: ingredients='$ingredientsString', ranking=$ranking, number=$number")
+            Log.d(
+                TAG,
+                "Llamando a /findByIngredients: ingredients='$ingredientsString', ranking=$ranking, number=$number"
+            )
 
             val response: List<FindByIngredientsDto> = httpClient.get {
                 url("findByIngredients")
@@ -71,12 +75,14 @@ class RecipeRemoteDataSource(private val httpClient: HttpClient) : SpoonacularAp
     ): Result<ComplexSearchResponseDto> {
 
         return runCatching {
-            val logParams = "ingredients=${includeIngredients?.joinToString(",")}, cuisine=$cuisine, offset=$offset, number=$number"
-            Log.d(TAG, "Llamando a /recipes/complexSearch con: $logParams")
+            Log.d(TAG, "Llamando a /recipes/complexSearch")
 
             val response: ComplexSearchResponseDto = httpClient.get {
                 url("/complexSearch")
-                if (!includeIngredients.isNullOrEmpty()) parameter("includeIngredients", includeIngredients.joinToString(","))
+                if (!includeIngredients.isNullOrEmpty()) parameter(
+                    "includeIngredients",
+                    includeIngredients.joinToString(",")
+                )
                 if (!cuisine.isNullOrBlank()) parameter("cuisine", cuisine)
                 // Parámetros de paginación (usan el valor recibido, que será el default si no se especificó otro)
                 parameter("offset", offset)
@@ -93,12 +99,9 @@ class RecipeRemoteDataSource(private val httpClient: HttpClient) : SpoonacularAp
         return runCatching {
             Log.d(TAG, "Llamando a /recipes/$id/information")
             val response: RecipeDetailedDto = httpClient.get {
-
                 url("/$id/information")
             }.body()
             response
-        }.onFailure { e ->
-            Log.e(TAG, "Error en API /recipes/$id/information", e)
-        }
+        }.onFailure { e -> Log.e(TAG, "Error en API /recipes/$id/information", e) }
     }
 }

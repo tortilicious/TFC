@@ -106,8 +106,8 @@ fun RecipeEntity.toRecipeDetailed(ingredientPojos: List<IngredientUsageDetailsPo
     return RecipeDetailed(
         id = this.id,
         title = this.title,
-        imageUrl = this.imageUrl, // Entity usa 'imageUrl'
-        cuisines = this.cuisines, // Entity sí tiene 'cuisines' (convertido por TypeConverter)
+        imageUrl = this.imageUrl,
+        cuisines = this.cuisines,
         instructions = this.instructions,
         readyInMinutes = this.readyInMinutes,
         servings = this.servings,
@@ -182,13 +182,12 @@ fun RecipeDetailed.toRecipeEntity(): RecipeEntity {
  * @param recipeId El ID de la receta a la que se asocia este ingrediente.
  * @return La entidad [AuxRecipeIngredientEntity] lista para Room, o null si el ID del ingrediente es nulo.
  */
-fun IngredientDetailed.toAuxRecipeIngredientEntity(recipeId: Int): AuxRecipeIngredientEntity? {
+fun IngredientDetailed.toAuxRecipeIngredientEntity(recipeId: Int): AuxRecipeIngredientEntity {
     return AuxRecipeIngredientEntity(
         recipeId = recipeId,
         ingredientId = this.id,
         amount = this.amount,
         unit = this.unit
-        // originalString = this.originalString // Podrías añadir este campo a AuxRecipeIngredientEntity
     )
 }
 
@@ -198,7 +197,7 @@ fun IngredientDetailed.toAuxRecipeIngredientEntity(recipeId: Int): AuxRecipeIngr
  * @receiver El modelo de dominio detallado del ingrediente.
  * @return La entidad [IngredientEntity] lista para Room, o null si el ID del ingrediente es nulo.
  */
-fun IngredientDetailed.toIngredientEntity(): IngredientEntity? {
+fun IngredientDetailed.toIngredientEntity(): IngredientEntity {
     return IngredientEntity(
         id = this.id,
         name = this.name
