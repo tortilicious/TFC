@@ -4,6 +4,7 @@ import android.app.Application
 // Importaciones de Koin
 import com.example.cookhelpapp.di.dataModule // Módulo de datos
 import com.example.cookhelpapp.di.domainModule // Módulo de dominio (Use Cases)
+import com.example.cookhelpapp.di.viewModelModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -34,7 +35,8 @@ class MainApplication : Application() {
             // Carga todos los módulos Koin definidos. Koin buscará definiciones en todos ellos.
             modules(
                 dataModule,   // Contiene HttpClient, DataSources, Database, DAOs, Repository
-                domainModule  // Contiene los Use Cases
+                domainModule,  // Contiene los Use Cases
+                viewModelModule // Contiene los ViewModels
             )
         }
     }

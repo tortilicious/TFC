@@ -2,6 +2,7 @@ package com.example.cookhelpapp.domain.usecase
 
 import com.example.cookhelpapp.domain.model.RecipeSummary
 import com.example.cookhelpapp.domain.repository.RecipeRepository
+import com.example.cookhelpapp.utils.PagingConstants
 import kotlin.Result
 
 /**
@@ -24,8 +25,8 @@ class SearchComplexRecipesUseCase(
     suspend operator fun invoke(
         includeIngredients: List<String>? = null,
         cuisine: String? = null,
-        offset: Int = 0,
-        number: Int = 20
+        offset: Int,
+        number: Int
     ): Result<List<RecipeSummary>> {
         return repository.searchComplexRecipes(includeIngredients, cuisine, offset, number)
     }

@@ -1,4 +1,4 @@
-package com.example.cookhelpapp.ui.theme
+package com.example.cookhelpapp.presentation.theme
 
 import androidx.compose.ui.graphics.Color
 

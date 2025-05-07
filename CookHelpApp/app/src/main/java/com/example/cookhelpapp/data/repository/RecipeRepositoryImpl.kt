@@ -72,10 +72,10 @@ class RecipeRepositoryImpl(
      * o un [Throwable] en caso de fallo.
      */
     override suspend fun searchRecipesByIngredients(
-        includeIngredients: List<String>, ranking: Int, number: Int, offset: Int
+        includeIngredients: List<String>?, ranking: Int, number: Int, offset: Int
     ): Result<List<RecipeSummary>> {
         Log.d(TAG, "Repo: Iniciando búsqueda por ingredientes (API)...")
-        return remoteDataSource.getRecipesByIngredients(includeIngredients, ranking)
+        return remoteDataSource.getRecipesByIngredients(includeIngredients ?: emptyList(), ranking)
             .mapCatching { findByIngredientsRecipeList -> // dtoList es List<FindByIngredientsDto>
                 Log.d(TAG, "Repo: Éxito búsqueda por ingredientes. Mapeando ${findByIngredientsRecipeList.size} DTOs a RecipeSummary.")
                 findByIngredientsRecipeList.map { it.toRecipeSummary() }

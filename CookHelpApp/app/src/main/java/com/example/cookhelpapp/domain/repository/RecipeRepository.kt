@@ -28,7 +28,7 @@ interface RecipeRepository {
      * @return Result con la lista simple de RecipeSummary o un error.
      */
     suspend fun searchRecipesByIngredients(
-        includeIngredients: List<String>,
+        includeIngredients: List<String>?,
         ranking: Int,
         offset: Int = 0,
         number: Int = 20

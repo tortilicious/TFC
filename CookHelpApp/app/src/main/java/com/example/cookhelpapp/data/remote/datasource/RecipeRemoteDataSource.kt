@@ -69,7 +69,7 @@ class RecipeRemoteDataSource(private val httpClient: HttpClient) : SpoonacularAp
         return runCatching {
             Log.d(TAG, "Llamando a /recipes/complexSearch")
             val response: ComplexSearchResponseDto = httpClient.get {
-                url("/complexSearch")
+                url("complexSearch")
                 if (!includeIngredients.isNullOrEmpty()) parameter("includeIngredients", includeIngredients.joinToString(","))
                 if (!cuisine.isNullOrBlank()) parameter("cuisine", cuisine)
                 // Parámetros de paginación (usan el valor recibido, que será el default si no se especificó otro)
@@ -87,7 +87,7 @@ class RecipeRemoteDataSource(private val httpClient: HttpClient) : SpoonacularAp
         return runCatching {
             Log.d(TAG, "Llamando a /recipes/$id/information")
             val response: RecipeDetailedDto = httpClient.get {
-                url("/$id/information")
+                url("$id/information")
             }.body()
             response
         }.onFailure { e -> Log.e(TAG, "Error en API /recipes/$id/information", e) }

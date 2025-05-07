@@ -28,5 +28,4 @@ val domainModule = module {
     factoryOf(::AddFavoriteUseCase)
     factoryOf(::RemoveFavoriteUseCase)
     factoryOf(::GetLocalFavoriteRecipeDetailsStreamUseCase)
-
 }

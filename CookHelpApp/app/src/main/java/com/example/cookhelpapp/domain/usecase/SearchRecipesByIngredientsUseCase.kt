@@ -23,8 +23,10 @@ class SearchRecipesByIngredientsUseCase(
     suspend operator fun invoke(
         includeIngredients: List<String>,
         ranking: Int,
+        offset: Int,
+        number: Int
     ): Result<List<RecipeSummary>> {
         // require(ranking == 1 || ranking == 2)
-        return repository.searchRecipesByIngredients(includeIngredients, ranking)
+        return repository.searchRecipesByIngredients(includeIngredients, ranking, offset, number)
     }
 }
