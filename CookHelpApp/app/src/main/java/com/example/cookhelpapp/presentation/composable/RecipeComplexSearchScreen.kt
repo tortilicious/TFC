@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.cookhelpapp.navigation.navigateToShowRecipesComplexSearch
-import com.example.cookhelpapp.presentation.viewmodel.RecipeSearchViewModel
+import com.example.cookhelpapp.presentation.viewmodel.RecipeComplexSearchViewModel
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -42,14 +42,14 @@ import org.koin.androidx.compose.koinViewModel
  *
  * @param navController Controlador de navegación para moverse a otras pantallas.
  * @param modifier Modificador Compose estándar.
- * @param viewModel Instancia de [RecipeSearchViewModel] obtenida automáticamente por Koin.
+ * @param viewModel Instancia de [RecipeComplexSearchViewModel] obtenida automáticamente por Koin.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipeSearchScreen(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    viewModel: RecipeSearchViewModel = koinViewModel()
+    viewModel: RecipeComplexSearchViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var cuisineDropdownExpanded by remember { mutableStateOf(false) }

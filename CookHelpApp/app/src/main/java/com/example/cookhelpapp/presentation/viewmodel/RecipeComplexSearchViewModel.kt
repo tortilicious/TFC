@@ -1,7 +1,7 @@
 package com.example.cookhelpapp.presentation.viewmodel // O tu paquete ui.search o ui.new_recipes
 
 import androidx.lifecycle.ViewModel
-import com.example.cookhelpapp.presentation.state.RecipeSearchInputState
+import com.example.cookhelpapp.presentation.state.RecipeComplexSearchInputState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,10 +14,10 @@ import kotlinx.coroutines.flow.update
  * NO realiza la búsqueda en sí, solo prepara los datos que se pasarán como argumentos
  * a la pantalla que mostrará los resultados.
  */
-class RecipeSearchViewModel : ViewModel() { // Nombre de la clase cambiado
+class RecipeComplexSearchViewModel : ViewModel() { // Nombre de la clase cambiado
 
-    private val _uiState = MutableStateFlow(RecipeSearchInputState())
-    val uiState: StateFlow<RecipeSearchInputState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(RecipeComplexSearchInputState())
+    val uiState: StateFlow<RecipeComplexSearchInputState> = _uiState.asStateFlow()
 
     /**
      * Actualiza el texto en el campo de input para añadir un nuevo ingrediente.

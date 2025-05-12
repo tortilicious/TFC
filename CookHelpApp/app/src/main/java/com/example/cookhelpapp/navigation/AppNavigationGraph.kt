@@ -9,12 +9,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.cookhelpapp.presentation.composable.MainMenuScreen
-import com.example.cookhelpapp.presentation.composable.PlaceholderScreen
+// Importa tu ZeroWasteInputScreen real aquí
+import com.example.cookhelpapp.presentation.composable.ZeroWasteInputScreen // <--- AÑADE ESTA IMPORTACIÓN
+import com.example.cookhelpapp.presentation.composable.PlaceholderScreen // Puedes quitarla si ya no usas placeholders
 import com.example.cookhelpapp.presentation.composable.RecipeDetailScreen
 import com.example.cookhelpapp.presentation.composable.RecipeSearchScreen
 import com.example.cookhelpapp.presentation.composable.ShowRecipesScreen
 
-// RecipeListMode y NavArgs ahora están definidos en Screen.kt (o en un archivo común de navegación)
 
 /**
  * Define el grafo de navegación principal de la aplicación.
@@ -30,40 +31,33 @@ fun AppNavigationGraph() {
         }
 
         composable(route = Screen.NewRecipesInput.route) {
-            // Esta pantalla recoge filtros para API_COMPLEX_SEARCH
             RecipeSearchScreen(navController = navController)
         }
 
         composable(route = Screen.ZeroWasteRecipesInput.route) {
-            // Esta pantalla recogerá ingredientes y ranking para API_BY_INGREDIENTS_SEARCH
-            // Deberás crear esta pantalla, similar a RecipeSearchScreen.
-            // Por ahora, un placeholder:
-            PlaceholderScreen(screenName = "Entrada Aprovechamiento (ZeroWasteInputScreen)")
-            // Ejemplo de cómo sería:
-            // ZeroWasteInputScreen(navController = navController)
+            ZeroWasteInputScreen(navController = navController)
         }
 
-        // Ruta actualizada para ShowRecipesScreen
         composable(
-            route = Screen.ShowRecipes.route + "/{${NavArgs.SCREEN_MODE}}" + // screenDisplayMode como path param
+            route = Screen.ShowRecipes.route + "/{${NavArgs.SCREEN_MODE}}" +
                     "?${NavArgs.INGREDIENTS}={${NavArgs.INGREDIENTS}}" +
                     "&${NavArgs.CUISINE}={${NavArgs.CUISINE}}" +
-                    "&${NavArgs.RANKING}={${NavArgs.RANKING}}", // Ranking como String
+                    "&${NavArgs.RANKING}={${NavArgs.RANKING}}",
             arguments = listOf(
                 navArgument(NavArgs.SCREEN_MODE) {
                     type = NavType.StringType
-                }, // Obligatorio, será un nombre del enum ScreenDisplayMode
-                navArgument(NavArgs.INGREDIENTS) { // Opcional
+                },
+                navArgument(NavArgs.INGREDIENTS) {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
                 },
-                navArgument(NavArgs.CUISINE) { // Opcional
+                navArgument(NavArgs.CUISINE) {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
                 },
-                navArgument(NavArgs.RANKING) { // Opcional, se pasa como String
+                navArgument(NavArgs.RANKING) {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
@@ -86,7 +80,7 @@ fun AppNavigationGraph() {
     }
 }
 
-// --- Funciones de extensión para NavController (actualizadas) ---
+// --- Funciones de extensión para NavController (sin cambios respecto a tu versión) ---
 
 fun NavHostController.navigateToMainMenu() {
     this.navigate(Screen.MainMenu.route) {
@@ -94,19 +88,14 @@ fun NavHostController.navigateToMainMenu() {
     }
 }
 
-/** Navega a la pantalla de entrada para búsqueda compleja (nuevas recetas). */
 fun NavHostController.navigateToNewRecipesInput() {
     this.navigate(Screen.NewRecipesInput.route)
 }
 
-/** Navega a la pantalla de entrada para búsqueda por ingredientes (aprovechamiento). */
 fun NavHostController.navigateToZeroWasteInput() {
     this.navigate(Screen.ZeroWasteRecipesInput.route)
 }
 
-/**
- * Navega a la pantalla ShowRecipes para búsqueda compleja.
- */
 fun NavHostController.navigateToShowRecipesComplexSearch(
     ingredients: String?,
     cuisine: String?
@@ -115,30 +104,22 @@ fun NavHostController.navigateToShowRecipesComplexSearch(
         mode = ScreenDisplayMode.API_COMPLEX_SEARCH,
         ingredients = ingredients,
         cuisine = cuisine
-
     )
     this.navigate(route)
 }
 
-/**
- * Navega a la pantalla ShowRecipes para búsqueda por ingredientes.
- */
 fun NavHostController.navigateToShowRecipesByIngredientsSearch(
-    ingredients: String, // Requerido para esta búsqueda
-    ranking: String // Requerido para esta búsqueda (ej. "1" o "2")
+    ingredients: String,
+    ranking: String
 ) {
     val route = Screen.ShowRecipes.createRoute(
         mode = ScreenDisplayMode.API_BY_INGREDIENTS_SEARCH,
         ingredients = ingredients,
         ranking = ranking
-        // cuisine no es relevante para byIngredients search en este ejemplo
     )
     this.navigate(route)
 }
 
-/**
- * Navega a ShowRecipesScreen en modo LOCAL_FAVORITES.
- */
 fun NavHostController.navigateToFavorites() {
     this.navigate(Screen.ShowRecipes.createRoute(mode = ScreenDisplayMode.LOCAL_FAVORITES))
 }

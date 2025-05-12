@@ -1,8 +1,9 @@
 package com.example.cookhelpapp.di
 
+import com.example.cookhelpapp.presentation.viewmodel.RecipeComplexSearchViewModel
 import com.example.cookhelpapp.presentation.viewmodel.RecipeDetailViewModel
-import com.example.cookhelpapp.presentation.viewmodel.RecipeSearchViewModel
 import com.example.cookhelpapp.presentation.viewmodel.ShowRecipesViewModel
+import com.example.cookhelpapp.presentation.viewmodel.ZeroWasteInputViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.androidx.viewmodel.dsl.viewModelOf
 import org.koin.dsl.module
@@ -14,10 +15,10 @@ import org.koin.dsl.module
 val viewModelModule = module {
 
     /**
-     * Proveedor para [RecipeSearchViewModel].
+     * Proveedor para [RecipeComplexSearchViewModel].
      * Este ViewModel gestiona el estado de los inputs en la pantalla de búsqueda de recetas.
      */
-    viewModelOf(::RecipeSearchViewModel)
+    viewModelOf(::RecipeComplexSearchViewModel)
 
     /**
      * Proveedor para [ShowRecipesViewModel].
@@ -25,6 +26,30 @@ val viewModelModule = module {
      * los resultados de búsqueda de recetas o la lista de favoritos.
      * Requiere [SearchComplexRecipesUseCase], [GetFavoriteRecipesStreamUseCase]
      * y [SavedStateHandle], que Koin inyectará automáticamente.
+     */
+    viewModel { params ->
+        ShowRecipesViewModel(
+            savedStateHandle = params.get(),
+            searchComplexRecipesUseCase = get(),
+            getFavoriteRecipesStreamUseCase = get(),
+            searchRecipesByIngredientsUseCase = get()
+        )
+    }
+
+    /**
+     * Proveedor para [ZeroWasteInputViewModel].
+     * Este ViewModel gestiona el estado de los inputs en la pantalla de búsqueda
+     * de recetas por ingredientes (aprovechamiento).
+     */
+    viewModelOf(::ZeroWasteInputViewModel)
+
+    /**
+     * Proveedor para [ShowRecipesViewModel].
+     * Este ViewModel gestiona el estado y la lógica para la pantalla que muestra
+     * los resultados de búsqueda de recetas o la lista de favoritos.
+     * Requiere [SearchComplexRecipesUseCase], [GetFavoriteRecipesStreamUseCase],
+     * [SearchRecipesByIngredientsUseCase] y [SavedStateHandle],
+     * que Koin inyectará automáticamente.
      */
     viewModel { params ->
         ShowRecipesViewModel(

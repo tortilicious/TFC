@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController // <--- CAMBIO AQUÍ: NavController a NavHostController
 import com.example.cookhelpapp.navigation.Screen
 import com.example.cookhelpapp.navigation.navigateToFavorites
+import com.example.cookhelpapp.navigation.navigateToZeroWasteInput
 
 /**
  * Pantalla principal de la aplicación que muestra las opciones del menú.
@@ -26,7 +27,7 @@ import com.example.cookhelpapp.navigation.navigateToFavorites
  */
 @Composable
 fun MainMenuScreen(
-    navController: NavHostController, // <--- CAMBIO AQUÍ: NavController a NavHostController
+    navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -49,9 +50,9 @@ fun MainMenuScreen(
             Text("New Recipes")
         }
 
-        // Botón 2: Aprovechamiento
+        // Botón 2: Aprovechamiento (Zero-Waste Recipes)
         Button(
-            onClick = { navController.navigate(Screen.ZeroWasteRecipesInput.route) },
+            onClick = { navController.navigateToZeroWasteInput() },
             modifier = Modifier
                 .width(240.dp)
                 .padding(vertical = 8.dp)

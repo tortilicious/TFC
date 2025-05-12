@@ -4,7 +4,7 @@ package com.example.cookhelpapp.presentation.state
  * Representa el estado inmutable de la pantalla de búsqueda de recetas ("Nuevas Recetas").
  * Contiene los filtros del usuario, los resultados y el estado de carga/paginación.
  */
-data class RecipeSearchInputState(
+data class RecipeComplexSearchInputState(
     // --- Estado de los Inputs del Usuario ---
     /** El texto actual en el campo de texto para añadir un nuevo ingrediente. */
     val currentIngredientInput: String = "",
