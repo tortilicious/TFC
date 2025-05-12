@@ -16,10 +16,7 @@ import kotlinx.coroutines.flow.update
  */
 class RecipeSearchViewModel : ViewModel() { // Nombre de la clase cambiado
 
-    // Estado interno mutable.
-    // Considera si NewRecipesInputUiState también debería renombrarse a algo como RecipeSearchInputUiState
     private val _uiState = MutableStateFlow(RecipeSearchInputState())
-    // Estado público inmutable para la UI.
     val uiState: StateFlow<RecipeSearchInputState> = _uiState.asStateFlow()
 
     /**

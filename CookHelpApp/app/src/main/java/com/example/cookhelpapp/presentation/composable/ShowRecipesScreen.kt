@@ -1,20 +1,18 @@
 package com.example.cookhelpapp.presentation.composable
 
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,29 +29,29 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.cookhelpapp.domain.model.RecipeSummary
+import com.example.cookhelpapp.navigation.Screen
 import com.example.cookhelpapp.presentation.viewmodel.ShowRecipesViewModel
 import org.koin.androidx.compose.koinViewModel
 
 /**
- * Pantalla Composable que muestra la lista de resultados de búsqueda de recetas.
- * Observa el estado de [ShowRecipesViewModel] para mostrar la lista,
- * indicadores de carga, mensajes de error y manejar la paginación ("scroll infinito").
+ * Pantalla que muestra la lista de resultados de búsqueda de recetas.
+ * Permite hacer clic en un item para navegar a la pantalla de detalle.
  *
+ * @param navController Controlador de navegación para ir a otras pantallas.
  * @param modifier Modificador Compose estándar.
- * @param viewModel Instancia de [ShowRecipesViewModel] obtenida automáticamente por Koin.
- * Los argumentos de navegación son leídos por el ViewModel a través de SavedStateHandle.
+ * @param viewModel Instancia de [ShowRecipesViewModel] obtenida por Koin.
  */
 @Composable
 fun ShowRecipesScreen(
     modifier: Modifier = Modifier,
-    viewModel: ShowRecipesViewModel = koinViewModel() // Inyecta el ViewModel
+    viewModel: ShowRecipesViewModel = koinViewModel(),
+    navController: NavController
 ) {
-    // Observa el estado de la UI desde el ViewModel de forma segura respecto al ciclo de vida
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    // Estado para controlar y observar el scroll de LazyColumn (para paginación)
     val listState = rememberLazyListState()
 
     // --- Estructura Principal de la Pantalla ---
@@ -69,36 +67,7 @@ fun ShowRecipesScreen(
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        // --- Manejo de Estados de Carga y Error ---
-
-        // 1. Carga inicial (solo se muestra si la lista está vacía y no hay error)
-        if (uiState.isLoadingInitial && uiState.recipes.isEmpty() && uiState.error == null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        }
-
-        // 2. Mensaje de error
-        uiState.error?.let { errorMsg ->
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp)
-            ) {
-                Text(
-                    text = "Error: $errorMsg",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { viewModel.fetchRecipes(isNewSearch = true) }) {
-                    Text("Reintentar")
-                }
-            }
-        }
-
-        // 3. Mensaje si no hay resultados (después de que la carga inicial termine sin error)
+        // Mensaje si no hay resultados (después de que la carga inicial termine sin error)
         if (uiState.noResults && !uiState.isLoadingInitial && uiState.error == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
@@ -121,8 +90,10 @@ fun ShowRecipesScreen(
                 items(
                     items = uiState.recipes,
                     key = { recipe -> recipe.id } // Key única para cada item (ayuda a Compose)
-                ) { recipe ->
-                    RecipeItem(recipe = recipe) // Llama al Composable que dibuja cada item
+                ) { recipe -> RecipeItem(
+                        recipe = recipe,
+                        onItemClick = { recipeId -> navController.navigate(Screen.RecipeDetail.createRoute(recipeId)) }
+                    ) // Llama al Composable que dibuja cada item
                 }
 
                 // Añade un item al final para mostrar el indicador de carga "más"
@@ -131,16 +102,16 @@ fun ShowRecipesScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp), // Padding para que se vea bien
+                                .padding(16.dp),
                             horizontalArrangement = Arrangement.Center
                         ) {
                             CircularProgressIndicator()
                         }
                     }
                 }
-            } // Fin LazyColumn
+            }
         }
-    } // Fin Column principal
+    }
 
     // --- Lógica Reactiva para Paginación (Scroll Infinito) ---
 
@@ -162,7 +133,6 @@ fun ShowRecipesScreen(
                 val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
 
                 // Umbral para disparar la carga (ej: cuando queden N items o menos por debajo para ver)
-                // Ajusta el '5' según cuántos items quieres que falten para empezar a cargar.
                 val loadMoreThreshold = totalItemsInList - 5
 
                 // Cargar más si el último item visible ha superado el umbral
@@ -174,12 +144,11 @@ fun ShowRecipesScreen(
     // Efecto que se dispara cuando el valor de `shouldLoadMore.value` cambia a true
     LaunchedEffect(shouldLoadMore.value) {
         if (shouldLoadMore.value) {
-            // Llama al ViewModel para pedir la siguiente página de resultados
             viewModel.loadMoreRecipes()
         }
     }
 
-} // Fin Composable ShowRecipesScreen
+}
 
 /**
  * Composable simple para mostrar la información de un [RecipeSummary] en una tarjeta.
@@ -189,22 +158,22 @@ fun ShowRecipesScreen(
  * @param modifier Modificador Compose estándar.
  */
 @Composable
-fun RecipeItem(recipe: RecipeSummary, modifier: Modifier = Modifier) {
+fun RecipeItem(recipe: RecipeSummary, modifier: Modifier = Modifier, onItemClick: (Int) -> Unit) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onItemClick(recipe.id) },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) // Sombra ligera
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(8.dp) // Padding interno de la tarjeta
+            modifier = Modifier.padding(8.dp)
         ) {
             // Imagen de la receta usando Coil
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(recipe.imageUrl) // URL de la imagen
                     .crossfade(true) // Efecto de fundido suave
-                    // .placeholder(R.drawable.placeholder_image) // Opcional: Placeholder
-                    // .error(R.drawable.error_image) // Opcional: Imagen de error
                     .build(),
                 contentDescription = "Imagen de ${recipe.title}",
                 modifier = Modifier

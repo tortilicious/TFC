@@ -13,8 +13,11 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
-import com.example.cookhelpapp.navigation.Screen // Asegúrate de importar tu clase Screen
+import androidx.navigation.NavHostController // <--- Cambiado a NavHostController por consistencia
+import com.example.cookhelpapp.navigation.RecipeListMode // <--- Importar RecipeListMode
+import com.example.cookhelpapp.navigation.Screen
+// Si decides usar la función de extensión:
+// import com.example.cookhelpapp.navigation.navigateToShowRecipes
 import com.example.cookhelpapp.presentation.viewmodel.RecipeSearchViewModel
 import org.koin.androidx.compose.koinViewModel
 
@@ -30,9 +33,9 @@ import org.koin.androidx.compose.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipeSearchScreen(
-    navController: NavController,
+    navController: NavHostController,
     modifier: Modifier = Modifier,
-    viewModel: RecipeSearchViewModel = koinViewModel() // O el ViewModel correcto para esta pantalla
+    viewModel: RecipeSearchViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var cuisineDropdownExpanded by remember { mutableStateOf(false) }
@@ -42,11 +45,11 @@ fun RecipeSearchScreen(
         modifier = modifier
             .padding(16.dp)
             .fillMaxSize()
-            .clickable(
+            .clickable( // Para quitar el foco al hacer clic fuera
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) {
-                focusManager.clearFocus() // Limpia el foco al hacer clic fuera del TextField
+                focusManager.clearFocus()
             }
     ) {
         Text("Configura tu Búsqueda", style = MaterialTheme.typography.headlineMedium)
@@ -63,27 +66,28 @@ fun RecipeSearchScreen(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = {
                     viewModel.addIngredient()
-                    // No quitamos foco aquí para permitir añadir varios ingredientes seguidos
                 })
             )
-            // Si quieres un botón "+" para añadir, iría aquí:
-            // IconButton(onClick = { viewModel.addIngredient() }) { Icon(Icons.Filled.Add, "Añadir") }
+            // Ejemplo de botón para añadir explícitamente (opcional)
+            // IconButton(onClick = { viewModel.addIngredient() }) {
+            //     Icon(Icons.Filled.Add, contentDescription = "Añadir ingrediente")
+            // }
         }
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Mostrar ingredientes añadidos (si hay)
+        // Mostrar ingredientes añadidos
         if (uiState.selectedIngredients.isNotEmpty()) {
             Text("Ingredientes: ${uiState.selectedIngredients.joinToString(", ")}")
             // Opcional: Botón para limpiar ingredientes
             Button(
-                onClick = { /* viewModel.clearAllIngredients() - necesitarías este método en ViewModel */ },
+                onClick = { viewModel.clearAllIngredients() }, // Asegúrate de tener este método en ViewModel
                 modifier = Modifier.padding(top = 4.dp)
             ) {
                 Text("Limpiar Ingredientes")
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp)) // Aumentado espacio
 
         // Desplegable para seleccionar cocina
         ExposedDropdownMenuBox(
@@ -93,12 +97,12 @@ fun RecipeSearchScreen(
         ) {
             OutlinedTextField(
                 value = uiState.selectedCuisine ?: "Cualquier cocina",
-                onValueChange = {}, // No editable directamente
+                onValueChange = {},
                 readOnly = true,
                 label = { Text("Tipo de Cocina (Opcional)") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = cuisineDropdownExpanded) },
                 modifier = Modifier
-                    .menuAnchor()
+                    .menuAnchor() // Necesario para que el menú se ancle correctamente
                     .fillMaxWidth()
             )
             ExposedDropdownMenu(
@@ -124,32 +128,42 @@ fun RecipeSearchScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp)) // Aumentado espacio
 
         // Botón para NAVEGAR a la pantalla de resultados
         Button(
             onClick = {
-                focusManager.clearFocus() // Quita foco antes de navegar
-
-                // Prepara los argumentos SIN URLEncoder
+                focusManager.clearFocus()
                 val ingredientsArg = uiState.selectedIngredients.takeIf { it.isNotEmpty() }
-                    ?.joinToString(",") // Si no es null y no está vacío, une con comas
-                // Si es null o vacío, el resultado de takeIf es null,
-                // entonces ingredientsArg será null.
+                    ?.joinToString(",")
+                val cuisineArg = uiState.selectedCuisine
+                val searchTypeArg = "complex" // Tipo de búsqueda para "New Recipes"
 
-                val cuisineArg = uiState.selectedCuisine // Ya es String?
-
-                // Navega usando la función createRoute de tu objeto Screen
+                // Navega usando la función createRoute de tu objeto Screen,
+                // asegurándote de pasar el RecipeListMode.ALL_RECIPES.
                 navController.navigate(
                     Screen.ShowRecipes.createRoute(
-                        searchType = "complex", // O el tipo de búsqueda que corresponda
-                        ingredients = ingredientsArg, // Pasa el String o null
-                        cuisine = cuisineArg // Pasa el String o null
-                        // ranking no aplica para complexSearch
+                        mode = RecipeListMode.ALL_RECIPES, // <--- MODO AÑADIDO
+                        searchType = searchTypeArg,
+                        ingredients = ingredientsArg,
+                        cuisine = cuisineArg,
+                        ranking = null // Ranking no se usa en esta búsqueda "complex"
                     )
                 )
+                // Alternativamente, usando la función de extensión (si la tienes y prefieres):
+                // navController.navigateToShowRecipes(
+                //     mode = RecipeListMode.ALL_RECIPES,
+                //     searchType = searchTypeArg,
+                //     ingredients = ingredientsArg,
+                //     cuisine = cuisineArg,
+                //     ranking = null
+                // )
             },
             // Habilitado si hay al menos un ingrediente o una cocina seleccionada,
+            // o si se permite búsqueda sin filtros (ajusta según tu lógica de negocio).
+            // Para una búsqueda "complex" sin filtros, podría estar siempre habilitado
+            // o podrías requerir al menos un ingrediente si la API lo necesita.
+            // Por ahora, lo dejo como estaba:
             enabled = (uiState.selectedIngredients.isNotEmpty() || uiState.selectedCuisine != null),
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {

@@ -56,7 +56,10 @@ class RecipeRepositoryImpl(
         Log.d(TAG, "Repo: Iniciando búsqueda compleja (API)...")
         return remoteDataSource.complexSearchRecipes(includeIngredients, cuisine)
             .mapCatching { responseDto ->
-                Log.d(TAG, "Repo: Éxito búsqueda compleja. Mapeando ${responseDto.results.size} DTOs a RecipeSummary.")
+                Log.d(
+                    TAG,
+                    "Repo: Éxito búsqueda compleja. Mapeando ${responseDto.results.size} DTOs a RecipeSummary."
+                )
                 responseDto.results.map { it.toRecipeSummary() }
             }
             .onFailure { e -> Log.e(TAG, "Repo: Error en búsqueda compleja", e) }
@@ -77,7 +80,10 @@ class RecipeRepositoryImpl(
         Log.d(TAG, "Repo: Iniciando búsqueda por ingredientes (API)...")
         return remoteDataSource.getRecipesByIngredients(includeIngredients ?: emptyList(), ranking)
             .mapCatching { findByIngredientsRecipeList -> // dtoList es List<FindByIngredientsDto>
-                Log.d(TAG, "Repo: Éxito búsqueda por ingredientes. Mapeando ${findByIngredientsRecipeList.size} DTOs a RecipeSummary.")
+                Log.d(
+                    TAG,
+                    "Repo: Éxito búsqueda por ingredientes. Mapeando ${findByIngredientsRecipeList.size} DTOs a RecipeSummary."
+                )
                 findByIngredientsRecipeList.map { it.toRecipeSummary() }
             }
             .onFailure { e -> Log.e(TAG, "Repo: Error en búsqueda por ingredientes", e) }
@@ -114,7 +120,11 @@ class RecipeRepositoryImpl(
     override fun getFavoriteRecipesStream(): Flow<List<RecipeSummary>> {
         Log.d(TAG, "Repo: Obteniendo stream de favoritos locales...")
         return localDataSource.getAllRecipesStream()
-            .map { recipesList -> Log.d(TAG, "Repo: Stream de favoritos emitió ${recipesList.size} entidades. Mapeando a RecipeSummary.")
+            .map { recipesList ->
+                Log.d(
+                    TAG,
+                    "Repo: Stream de favoritos emitió ${recipesList.size} entidades. Mapeando a RecipeSummary."
+                )
                 recipesList.map { it.toRecipeSummary() }
             }
     }
@@ -144,6 +154,20 @@ class RecipeRepositoryImpl(
         }
     }
 
+    /**
+     * Obtiene un [Flow] que emite `true` si la receta es favorita (existe localmente), `false` si no.
+     * Llama al DataSource local y mapea el resultado de [RecipeEntity?] a [Boolean].
+     */
+    override fun isFavoriteStream(id: Int): Flow<Boolean> {
+        Log.d(TAG, "Repo: Obteniendo stream 'es favorito' para ID: $id")
+        return localDataSource.getRecipeByIdStream(id)
+            .map { entity ->
+                val isFavorite = entity != null
+                Log.d(TAG, "Repo: Stream 'es favorito' para ID $id emitió: $isFavorite")
+                isFavorite
+            }
+    }
+
 
     // --- MÉTODOS DE ESCRITURA EN LA BASE DE DATOS LOCAL (FAVORITOS) ---
 
@@ -164,7 +188,8 @@ class RecipeRepositoryImpl(
             Log.d(TAG, "Repo: Mapeando RecipeDetailed a Entities para ID: ${recipe.id}")
             val recipeEntity = recipe.toRecipeEntity()
             val ingredientEntities = recipe.ingredients.map { it.toIngredientEntity() }
-            val relationEntities = recipe.ingredients.map { it.toAuxRecipeIngredientEntity(recipe.id) }
+            val relationEntities =
+                recipe.ingredients.map { it.toAuxRecipeIngredientEntity(recipe.id) }
 
             database.withTransaction { // Ejecuta todas las operaciones dentro de una transacción
                 localDataSource.insertRecipe(recipeEntity)

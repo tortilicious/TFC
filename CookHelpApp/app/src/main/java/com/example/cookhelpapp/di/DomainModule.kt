@@ -6,6 +6,7 @@ import com.example.cookhelpapp.domain.usecase.AddFavoriteUseCase
 import com.example.cookhelpapp.domain.usecase.GetFavoriteRecipesStreamUseCase
 import com.example.cookhelpapp.domain.usecase.GetLocalFavoriteRecipeDetailsStreamUseCase
 import com.example.cookhelpapp.domain.usecase.GetRemoteRecipeDetailsUseCase
+import com.example.cookhelpapp.domain.usecase.IsFavoriteStreamUseCase
 import com.example.cookhelpapp.domain.usecase.RemoveFavoriteUseCase
 import com.example.cookhelpapp.domain.usecase.SearchComplexRecipesUseCase
 import com.example.cookhelpapp.domain.usecase.SearchRecipesByIngredientsUseCase
@@ -28,4 +29,5 @@ val domainModule = module {
     factoryOf(::AddFavoriteUseCase)
     factoryOf(::RemoveFavoriteUseCase)
     factoryOf(::GetLocalFavoriteRecipeDetailsStreamUseCase)
+    factoryOf(::IsFavoriteStreamUseCase)
 }

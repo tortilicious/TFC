@@ -60,6 +60,16 @@ interface RecipeRepository {
      */
     fun getLocalFavoriteRecipeDetailsStream(id: Int): Flow<RecipeDetailed?>
 
+    /**
+     * Obtiene un [Flow] que emite `true` si la receta con el [id] especificado
+     * es favorita (existe localmente), y `false` si no lo está.
+     * El Flow emitirá un nuevo valor booleano si el estado de favorito cambia.
+     *
+     * @param id El ID de la receta a comprobar.
+     * @return Un [Flow] que emite [Boolean].
+     */
+    fun isFavoriteStream(id: Int): Flow<Boolean>
+
 
     /**
      * Guarda una receta (obtenida previamente como [RecipeDetailed]) en la

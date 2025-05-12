@@ -1,208 +1,205 @@
-package com.example.cookhelpapp.presentation.viewmodel // O tu paquete ui.show_recipes
+package com.example.cookhelpapp.presentation.viewmodel
 
-import androidx.lifecycle.SavedStateHandle // Para leer argumentos de navegación
+import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.cookhelpapp.domain.model.RecipeSummary
+import com.example.cookhelpapp.domain.model.RecipeSummary // Asegúrate que la ruta es correcta
+import com.example.cookhelpapp.domain.usecase.GetFavoriteRecipesStreamUseCase
 import com.example.cookhelpapp.domain.usecase.SearchComplexRecipesUseCase
-import com.example.cookhelpapp.domain.usecase.SearchRecipesByIngredientsUseCase
-import com.example.cookhelpapp.presentation.state.ShowRecipesUiState
-import com.example.cookhelpapp.utils.PagingConstants
+import com.example.cookhelpapp.navigation.NavArgs
+import com.example.cookhelpapp.navigation.RecipeListMode
+import com.example.cookhelpapp.presentation.state.ShowRecipesUiState // Importa tu nueva clase UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.net.URLDecoder // Para decodificar argumentos si los codificaste
-import java.nio.charset.StandardCharsets
 
-/**
- * ViewModel para la pantalla que muestra los resultados de búsqueda de recetas.
- * Recibe los parámetros de búsqueda iniciales a través de [SavedStateHandle],
- * llama al Caso de Uso apropiado y gestiona la paginación y el estado de la UI.
- *
- * @property searchComplexRecipesUseCase Caso de uso para la búsqueda compleja.
- * @property searchRecipesByIngredientsUseCase Caso de uso para la búsqueda por ingredientes.
- * @property savedStateHandle Manejador para acceder a los argumentos de navegación.
- */
 class ShowRecipesViewModel(
+    private val savedStateHandle: SavedStateHandle,
     private val searchComplexRecipesUseCase: SearchComplexRecipesUseCase,
-    private val searchRecipesByIngredientsUseCase: SearchRecipesByIngredientsUseCase,
-    private val savedStateHandle: SavedStateHandle // Koin inyecta esto
+    private val getFavoriteRecipesStreamUseCase: GetFavoriteRecipesStreamUseCase
 ) : ViewModel() {
 
-    // Flujo de estado interno y mutable, solo accesible por el ViewModel.
-    // Inicializa con el estado por defecto de ShowRecipesUiState.
     private val _uiState = MutableStateFlow(ShowRecipesUiState())
-
-    // Flujo de estado público e inmutable, observado por la UI.
     val uiState: StateFlow<ShowRecipesUiState> = _uiState.asStateFlow()
 
+    private companion object {
+        const val TAG = "ShowRecipesVM"
+    }
+
     init {
-        // Al crear el ViewModel, lee los argumentos de navegación pasados.
-        val searchTypeArg: String = savedStateHandle.get<String>("searchType")
-            // Si no se pasó 'searchType' o es null, usa "complex" por defecto.
-            // Si no codificaste en createRoute, URLDecoder no es necesario.
-            ?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.name()) } ?: "complex"
+        // Obtener argumentos de navegación y configurar el estado inicial
+        val screenModeName: String? = savedStateHandle[NavArgs.SCREEN_MODE]
+        val currentScreenMode: RecipeListMode = RecipeListMode.valueOf(
+            screenModeName ?: RecipeListMode.ALL_RECIPES.name
+        )
 
-        val ingredientsString: String? = savedStateHandle.get<String>("ingredients")
-            // Si el argumento es la cadena literal "null", trátalo como null real.
-            ?.takeIf { it != "null" }
-        // Si no codificaste en createRoute, URLDecoder no es necesario.
-        // ?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.name()) }
+        val initialSearchType: String = savedStateHandle[NavArgs.SEARCH_TYPE] ?: "complex" // Se guarda en UiState pero no se usa directamente en el UseCase provisto
+        val initialIngredientsString: String? = savedStateHandle[NavArgs.INGREDIENTS]
+        val initialCuisineString: String? = savedStateHandle[NavArgs.CUISINE]
+        val initialRankingString: String? = savedStateHandle[NavArgs.RANKING] // Se guarda en UiState pero no se usa directamente en el UseCase provisto
 
-
-        val cuisine: String? = savedStateHandle.get<String>("cuisine")
-            ?.takeIf { it != "null" }
-        // ?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.name()) }
-
-        val rankingString: String? = savedStateHandle.get<String>("ranking")
-            ?.takeIf { it != "null" }
-        val ranking: Int? = rankingString?.toIntOrNull()
-
-        // Convierte el string de ingredientes (separado por comas) a una lista.
-        val initialIngredientsList = ingredientsString
-            ?.split(",")
-            ?.map { it.trim() }
-            ?.filter { it.isNotBlank() } // Evita strings vacíos en la lista
-
-        // Actualiza el estado inicial con los filtros leídos.
         _uiState.update {
             it.copy(
-                searchType = searchTypeArg,
-                initialIngredients = initialIngredientsList,
-                initialCuisine = cuisine,
-                initialRanking = ranking
+                searchType = initialSearchType,
+                initialIngredients = initialIngredientsString?.split(',')?.map { ing -> ing.trim() }?.filter { ing -> ing.isNotEmpty() },
+                initialCuisine = initialCuisineString,
+                initialRanking = initialRankingString?.toIntOrNull()
             )
         }
-
-        // Realiza la primera carga de recetas con los filtros obtenidos.
-        fetchRecipes(isNewSearch = true)
+        Log.d(TAG, "ViewModel init. Mode: $currentScreenMode, SearchType: $initialSearchType, Ingredients: $initialIngredientsString, Cuisine: $initialCuisineString, Ranking (from NavArg as String): $initialRankingString")
+        loadContentBasedOnMode(currentScreenMode)
     }
 
-    /**
-     * Obtiene recetas (primera página o siguientes) basado en los filtros iniciales
-     * guardados en el estado y el estado de paginación actual.
-     * @param isNewSearch True para la primera carga (resetea lista y offset), False para cargar más.
-     */
-    fun fetchRecipes(isNewSearch: Boolean = true) {
-        // Evita iniciar una nueva carga si ya hay una en progreso.
-        if (uiState.value.isLoadingInitial || uiState.value.isLoadingMore) return
-
-        val offsetToUse: Int // El offset que se usará para la llamada API.
-        if (isNewSearch) {
-            // Si es una búsqueda nueva, el offset es el inicial (0).
-            offsetToUse = PagingConstants.INITIAL_RECIPE_OFFSET
-            // Actualiza el estado para reflejar la carga inicial.
-            _uiState.update {
-                it.copy(
-                    isLoadingInitial = true, // Activa indicador de carga.
-                    recipes = emptyList(),   // Limpia la lista de recetas anterior.
-                    currentOffset = offsetToUse, // Guarda el offset que se usará.
-                    canLoadMore = false,     // Aún no sabemos si hay más páginas.
-                    error = null,            // Limpia cualquier error previo.
-                    noResults = false        // Resetea el flag de "sin resultados".
+    private fun loadContentBasedOnMode(mode: RecipeListMode) {
+        Log.d(TAG, "loadContentBasedOnMode: $mode")
+        when (mode) {
+            RecipeListMode.ALL_RECIPES -> {
+                fetchRemoteRecipes(
+                    // Los parámetros se toman del _uiState.value donde ya están parseados y guardados
+                    // searchTypeFromUiState = _uiState.value.searchType, // No es usado por el UseCase provisto
+                    ingredientsListFromUiState = _uiState.value.initialIngredients, // Pasamos la List<String>?
+                    cuisineFromUiState = _uiState.value.initialCuisine,
+                    // rankingFromUiState = _uiState.value.initialRanking, // No es usado por el UseCase provisto
+                    isInitialLoad = true
                 )
             }
-        } else {
-            // Si es para cargar más, primero verifica si se permite.
-            if (!uiState.value.canLoadMore) return // No hacer nada si ya no hay más.
-            // Usa el offset actual guardado en el estado (que apunta a la siguiente página).
-            offsetToUse = uiState.value.currentOffset
-            // Actualiza el estado para reflejar que se está cargando "más".
-            _uiState.update { it.copy(isLoadingMore = true, error = null, noResults = false) }
+            RecipeListMode.FAVORITE_RECIPES -> {
+                observeFavoriteRecipes()
+            }
+        }
+    }
+
+    fun fetchRemoteRecipes(
+        // searchTypeFromUiState: String, // No es usado por el UseCase provisto
+        ingredientsListFromUiState: List<String>?, // Ahora es List<String>?
+        cuisineFromUiState: String?,
+        // rankingFromUiState: Int?, // No es usado por el UseCase provisto
+        isInitialLoad: Boolean = true
+    ) {
+        if (_uiState.value.isLoadingInitial || _uiState.value.isLoadingMore) {
+            Log.d(TAG, "fetchRemoteRecipes: Already loading, skipping.")
+            return
         }
 
-        // Lanza una corutina en el scope del ViewModel (se cancela automáticamente).
-        viewModelScope.launch {
-            val currentUiState = uiState.value // Captura el estado actual para usar sus filtros.
-            val numberPerPage = currentUiState.numberPerPage
+        val currentOffsetToUse = if (isInitialLoad) 0 else _uiState.value.currentOffset
+        val numberToFetch = _uiState.value.numberPerPage
 
-            // Decide qué Caso de Uso llamar basado en el 'searchType' guardado.
-            val result: Result<List<RecipeSummary>> = when (currentUiState.searchType) {
-                "complex" -> {
-                    searchComplexRecipesUseCase(
-                        includeIngredients = currentUiState.initialIngredients,
-                        cuisine = currentUiState.initialCuisine,
-                        offset = offsetToUse,
-                        number = numberPerPage
-                    )
-                }
-                "byIngredients" -> {
-                    // Para esta búsqueda, asumimos que los ingredientes y el ranking son obligatorios.
-                    // La pantalla anterior debería asegurar que no son nulos.
-                    // Si initialIngredients o initialRanking fueran null aquí, indicaría un error de lógica.
-                    if (currentUiState.initialIngredients.isNullOrEmpty() || currentUiState.initialRanking == null) {
-                        Result.failure(IllegalArgumentException("Ingredientes y ranking son necesarios para la búsqueda por ingredientes."))
-                    } else {
-                        searchRecipesByIngredientsUseCase(
-                            includeIngredients = currentUiState.initialIngredients, // No necesita '!!' si la lógica lo asegura
-                            ranking = currentUiState.initialRanking,             // No necesita '!!'
-                            offset = offsetToUse,
-                            number = numberPerPage
-                        )
-                    }
-                }
-                else -> {
-                    // Tipo de búsqueda desconocido, actualiza el estado con un error.
-                    _uiState.update {
-                        it.copy(
-                            isLoadingInitial = false, isLoadingMore = false,
-                            error = "Tipo de búsqueda desconocido: ${currentUiState.searchType}",
-                            canLoadMore = false, noResults = true
-                        )
-                    }
-                    return@launch // Sale de la corutina.
-                }
+        Log.d(TAG, "fetchRemoteRecipes: IngList: $ingredientsListFromUiState, Cui: $cuisineFromUiState, Offset: $currentOffsetToUse, Initial: $isInitialLoad")
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isLoadingInitial = isInitialLoad,
+                    isLoadingMore = !isInitialLoad,
+                    error = null,
+                    noResults = false
+                )
             }
 
-            // Procesa el resultado de la llamada al Caso de Uso.
-            result.onSuccess { recipeList -> // recipeList es List<RecipeSummary>
-                _uiState.update { currentState ->
-                    // Si es una búsqueda nueva, reemplaza la lista; si no, añade a la existente.
-                    val currentRecipes = if (isNewSearch) emptyList() else currentState.recipes
-                    val updatedList = currentRecipes + recipeList
-                    // Calcula el offset para la *siguiente* petición.
-                    val nextOffset = offsetToUse + recipeList.size
-                    // Determina si se puede seguir cargando más.
-                    val canStillLoadMore = recipeList.isNotEmpty() && recipeList.size >= numberPerPage
+            // --- ADAPTACIÓN DE PARÁMETROS PARA searchComplexRecipesUseCase ---
+            // Los parámetros 'searchType' y 'ranking' de la navegación
+            // no son utilizados por la firma actual de SearchComplexRecipesUseCase.
+            // Si fueran necesarios para seleccionar diferentes endpoints o lógicas de ordenación
+            // más complejas, el UseCase o el Repositorio tendrían que manejarlo.
 
+            Log.d(TAG, "Calling UseCase with: includeIngredients=$ingredientsListFromUiState, cuisine=$cuisineFromUiState, offset=$currentOffsetToUse, number=$numberToFetch")
+
+            val result = searchComplexRecipesUseCase(
+                includeIngredients = ingredientsListFromUiState, // Directamente la List<String>?
+                cuisine = cuisineFromUiState,                   // Directamente el String?
+                offset = currentOffsetToUse,
+                number = numberToFetch
+            )
+            // FIN DE ADAPTACIÓN DE PARÁMETROS
+
+            result.onSuccess { newRecipes ->
+                Log.d(TAG, "fetchRemoteRecipes: Success, ${newRecipes.size} recipes received.")
+                _uiState.update { currentState ->
+                    val allRecipes = if (isInitialLoad) newRecipes else currentState.recipes + newRecipes
                     currentState.copy(
-                        isLoadingInitial = false, // Desactiva indicadores de carga.
+                        isLoadingInitial = false,
                         isLoadingMore = false,
-                        recipes = updatedList, // Lista actualizada.
-                        currentOffset = nextOffset, // Guarda el offset para la próxima.
-                        canLoadMore = canStillLoadMore, // Actualiza el flag.
-                        error = null, // Limpia error si hubo éxito.
-                        // Actualiza noResults: si la lista final está vacía después de la primera carga
-                        // o si una carga de "más" no trae nada nuevo y la lista ya estaba vacía.
-                        noResults = updatedList.isEmpty() && (isNewSearch || currentState.recipes.isEmpty())
+                        recipes = allRecipes,
+                        currentOffset = currentOffsetToUse + newRecipes.size,
+                        canLoadMore = newRecipes.size == numberToFetch,
+                        noResults = isInitialLoad && newRecipes.isEmpty()
                     )
                 }
-            }.onFailure { exception -> // Si la llamada falló...
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        isLoadingInitial = false, // Desactiva indicadores de carga.
+            }.onFailure { exception ->
+                Log.e(TAG, "fetchRemoteRecipes: Failure", exception)
+                _uiState.update {
+                    it.copy(
+                        isLoadingInitial = false,
                         isLoadingMore = false,
-                        error = exception.localizedMessage ?: "Error desconocido", // Guarda mensaje de error.
-                        // Si falla la carga inicial, no se puede cargar más.
-                        // Si falla al cargar más, mantenemos el valor anterior de canLoadMore.
-                        canLoadMore = if (isNewSearch) false else currentState.canLoadMore,
-                        noResults = currentState.recipes.isEmpty() // Si no hay recetas y falla, es noResults.
+                        error = exception.message ?: "Error al cargar recetas de la API",
+                        noResults = isInitialLoad
                     )
                 }
             }
         }
     }
 
-    /**
-     * Llamado por la UI para cargar la siguiente página de resultados.
-     * Simplemente delega en [fetchRecipes] indicando que no es una búsqueda nueva.
-     */
-    fun loadMoreRecipes() {
-        // Solo intenta cargar más si no está ya cargando algo y si se permite.
-        if (!uiState.value.isLoadingInitial && !uiState.value.isLoadingMore && uiState.value.canLoadMore) {
-            fetchRecipes(isNewSearch = false)
+    private fun observeFavoriteRecipes() {
+        Log.d(TAG, "observeFavoriteRecipes: Starting to observe.")
+        viewModelScope.launch {
+            getFavoriteRecipesStreamUseCase()
+                .onStart {
+                    Log.d(TAG, "observeFavoriteRecipes: Flow onStart.")
+                    _uiState.update { it.copy(isLoadingInitial = true, error = null, noResults = false) }
+                }
+                .catch { e ->
+                    Log.e(TAG, "observeFavoriteRecipes: Flow error", e)
+                    _uiState.update {
+                        it.copy(
+                            isLoadingInitial = false,
+                            error = e.message ?: "Error al cargar recetas favoritas",
+                            noResults = true
+                        )
+                    }
+                }
+                .collect { favoriteRecipes ->
+                    Log.d(TAG, "observeFavoriteRecipes: Flow collected ${favoriteRecipes.size} recipes.")
+                    _uiState.update {
+                        it.copy(
+                            isLoadingInitial = false,
+                            recipes = favoriteRecipes,
+                            error = null,
+                            canLoadMore = false,
+                            noResults = favoriteRecipes.isEmpty()
+                        )
+                    }
+                }
         }
+    }
+
+    fun loadMoreRecipes() {
+        val currentState = _uiState.value
+        if (currentState.canLoadMore && !currentState.isLoadingInitial && !currentState.isLoadingMore &&
+            RecipeListMode.valueOf(savedStateHandle[NavArgs.SCREEN_MODE] ?: RecipeListMode.ALL_RECIPES.name) == RecipeListMode.ALL_RECIPES) {
+            Log.d(TAG, "loadMoreRecipes: Triggered.")
+            fetchRemoteRecipes(
+                // searchTypeFromUiState = currentState.searchType, // No es usado por el UseCase provisto
+                ingredientsListFromUiState = currentState.initialIngredients,
+                cuisineFromUiState = currentState.initialCuisine,
+                // rankingFromUiState = currentState.initialRanking, // No es usado por el UseCase provisto
+                isInitialLoad = false
+            )
+        } else {
+            Log.d(TAG, "loadMoreRecipes: Cannot load more. CanLoadMore: ${currentState.canLoadMore}, IsLoading: ${currentState.isLoadingInitial || currentState.isLoadingMore}")
+        }
+    }
+
+    fun retryLoad() {
+        Log.d(TAG, "retryLoad: Triggered.")
+        val currentScreenMode: RecipeListMode = RecipeListMode.valueOf(
+            savedStateHandle[NavArgs.SCREEN_MODE] ?: RecipeListMode.ALL_RECIPES.name
+        )
+        _uiState.update { it.copy(currentOffset = 0, recipes = emptyList()) } // Reset para carga inicial
+        loadContentBasedOnMode(currentScreenMode)
     }
 }
