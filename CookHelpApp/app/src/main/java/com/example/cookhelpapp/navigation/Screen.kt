@@ -1,30 +1,26 @@
 package com.example.cookhelpapp.navigation
 
 /**
- * Define los diferentes modos en que se puede mostrar la lista de recetas.
- * Es buena práctica tenerlo en un archivo separado o junto a AppNavigationGraph.
+ * Define los diferentes modos en que se puede mostrar la pantalla de lista de recetas,
+ * indicando la fuente de datos y el tipo de búsqueda API si aplica.
  */
-enum class RecipeListMode {
-    /**
-     * Indica que se deben cargar recetas desde una fuente remota (API),
-     * usualmente aplicando filtros de búsqueda.
-     */
-    ALL_RECIPES,
+enum class ScreenDisplayMode {
+    /** Carga recetas desde la API usando una búsqueda compleja (ingredientes, cocina, etc.). */
+    API_COMPLEX_SEARCH,
 
-    /**
-     * Indica que se deben cargar las recetas favoritas guardadas localmente
-     * en la base de datos.
-     */
-    FAVORITE_RECIPES
+    /** Carga recetas desde la API basándose en ingredientes y un ranking de aprovechamiento. */
+    API_BY_INGREDIENTS_SEARCH,
+
+    /** Carga las recetas favoritas guardadas localmente. */
+    LOCAL_FAVORITES
 }
 
 /**
  * Define las claves para los argumentos de navegación de forma centralizada.
  */
 object NavArgs {
-    const val SCREEN_MODE = "screenMode"
+    const val SCREEN_MODE = "screenDisplayMode"
     const val RECIPE_ID = "recipeId"
-    const val SEARCH_TYPE = "searchType"
     const val INGREDIENTS = "ingredients"
     const val CUISINE = "cuisine"
     const val RANKING = "ranking"
@@ -45,29 +41,34 @@ sealed class Screen(val route: String) {
         /**
          * Construye la cadena de ruta completa para navegar a la pantalla ShowRecipes.
          *
-         * @param mode El modo de visualización (ALL_RECIPES o FAVORITE_RECIPES).
-         * @param searchType Tipo de búsqueda (relevante para ALL_RECIPES).
-         * @param ingredients Lista de ingredientes (relevante para ALL_RECIPES).
-         * @param cuisine Tipo de cocina (relevante para ALL_RECIPES).
-         * @param ranking Ranking (relevante para ALL_RECIPES).
+         * @param mode El ScreenDisplayMode que determina la fuente y tipo de datos.
+         * @param ingredients Lista de ingredientes (relevante para API_COMPLEX_SEARCH y API_BY_INGREDIENTS_SEARCH).
+         * @param cuisine Tipo de cocina (relevante para API_COMPLEX_SEARCH).
+         * @param ranking Ranking (relevante para API_BY_INGREDIENTS_SEARCH, se pasa como String).
          * @return La cadena de ruta completa con los argumentos.
          */
         fun createRoute(
-            mode: RecipeListMode,
-            searchType: String? = null,
+            mode: ScreenDisplayMode,
             ingredients: String? = null,
             cuisine: String? = null,
             ranking: String? = null
         ): String {
-            // screenMode es un parámetro de ruta obligatorio
-            var path = "$route/${mode.name}" // ej: show_recipes_screen/ALL_RECIPES
-
-            // Parámetros de consulta opcionales
+            var path = "$route/${mode.name}"
             val queryParams = mutableListOf<String>()
-            searchType?.let { queryParams.add("${NavArgs.SEARCH_TYPE}=$it") }
-            ingredients?.let { queryParams.add("${NavArgs.INGREDIENTS}=$it") }
-            cuisine?.let { queryParams.add("${NavArgs.CUISINE}=$it") }
-            ranking?.let { queryParams.add("${NavArgs.RANKING}=$it") }
+
+            when (mode) {
+                ScreenDisplayMode.API_COMPLEX_SEARCH -> {
+                    ingredients?.let { queryParams.add("${NavArgs.INGREDIENTS}=$it") }
+                    cuisine?.let { queryParams.add("${NavArgs.CUISINE}=$it") }
+                }
+
+                ScreenDisplayMode.API_BY_INGREDIENTS_SEARCH -> {
+                    ingredients?.let { queryParams.add("${NavArgs.INGREDIENTS}=$it") }
+                    ranking?.let { queryParams.add("${NavArgs.RANKING}=$it") }
+                }
+
+                ScreenDisplayMode.LOCAL_FAVORITES -> { }
+            }
 
             if (queryParams.isNotEmpty()) {
                 path += "?" + queryParams.joinToString("&")

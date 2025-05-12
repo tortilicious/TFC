@@ -1,15 +1,14 @@
 package com.example.cookhelpapp.presentation.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.cookhelpapp.domain.model.RecipeSummary // Asegúrate que la ruta es correcta
 import com.example.cookhelpapp.domain.usecase.GetFavoriteRecipesStreamUseCase
 import com.example.cookhelpapp.domain.usecase.SearchComplexRecipesUseCase
+import com.example.cookhelpapp.domain.usecase.SearchRecipesByIngredientsUseCase
 import com.example.cookhelpapp.navigation.NavArgs
-import com.example.cookhelpapp.navigation.RecipeListMode
-import com.example.cookhelpapp.presentation.state.ShowRecipesUiState // Importa tu nueva clase UiState
+import com.example.cookhelpapp.navigation.ScreenDisplayMode
+import com.example.cookhelpapp.presentation.state.ShowRecipesUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,75 +20,84 @@ import kotlinx.coroutines.launch
 class ShowRecipesViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val searchComplexRecipesUseCase: SearchComplexRecipesUseCase,
-    private val getFavoriteRecipesStreamUseCase: GetFavoriteRecipesStreamUseCase
+    private val getFavoriteRecipesStreamUseCase: GetFavoriteRecipesStreamUseCase,
+    private val searchRecipesByIngredientsUseCase: SearchRecipesByIngredientsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ShowRecipesUiState())
     val uiState: StateFlow<ShowRecipesUiState> = _uiState.asStateFlow()
 
-    private companion object {
-        const val TAG = "ShowRecipesVM"
-    }
-
     init {
-        // Obtener argumentos de navegación y configurar el estado inicial
         val screenModeName: String? = savedStateHandle[NavArgs.SCREEN_MODE]
-        val currentScreenMode: RecipeListMode = RecipeListMode.valueOf(
-            screenModeName ?: RecipeListMode.ALL_RECIPES.name
+        val currentScreenDisplayMode: ScreenDisplayMode = ScreenDisplayMode.valueOf(
+            screenModeName?: ScreenDisplayMode.API_COMPLEX_SEARCH.name // Un valor por defecto seguro
         )
-
-        val initialSearchType: String = savedStateHandle[NavArgs.SEARCH_TYPE] ?: "complex" // Se guarda en UiState pero no se usa directamente en el UseCase provisto
         val initialIngredientsString: String? = savedStateHandle[NavArgs.INGREDIENTS]
         val initialCuisineString: String? = savedStateHandle[NavArgs.CUISINE]
-        val initialRankingString: String? = savedStateHandle[NavArgs.RANKING] // Se guarda en UiState pero no se usa directamente en el UseCase provisto
+        val initialRankingString: String? = savedStateHandle[NavArgs.RANKING]
 
         _uiState.update {
             it.copy(
-                searchType = initialSearchType,
-                initialIngredients = initialIngredientsString?.split(',')?.map { ing -> ing.trim() }?.filter { ing -> ing.isNotEmpty() },
+                initialIngredients = initialIngredientsString?.split(',')?.map { ing -> ing.trim() }
+                    ?.filter { ing -> ing.isNotEmpty() },
                 initialCuisine = initialCuisineString,
                 initialRanking = initialRankingString?.toIntOrNull()
             )
         }
-        Log.d(TAG, "ViewModel init. Mode: $currentScreenMode, SearchType: $initialSearchType, Ingredients: $initialIngredientsString, Cuisine: $initialCuisineString, Ranking (from NavArg as String): $initialRankingString")
-        loadContentBasedOnMode(currentScreenMode)
+        loadContentBasedOnMode(currentScreenDisplayMode)
     }
 
-    private fun loadContentBasedOnMode(mode: RecipeListMode) {
-        Log.d(TAG, "loadContentBasedOnMode: $mode")
+    private fun loadContentBasedOnMode(mode: ScreenDisplayMode) {
+        val title = when (mode) {
+            ScreenDisplayMode.LOCAL_FAVORITES -> "Mis Recetas Favoritas"
+            ScreenDisplayMode.API_BY_INGREDIENTS_SEARCH -> "Recetas por Ingredientes"
+            ScreenDisplayMode.API_COMPLEX_SEARCH -> "Resultados de Búsqueda"
+        }
+        _uiState.update { it.copy(screenTitle = title) }
+
         when (mode) {
-            RecipeListMode.ALL_RECIPES -> {
-                fetchRemoteRecipes(
-                    // Los parámetros se toman del _uiState.value donde ya están parseados y guardados
-                    // searchTypeFromUiState = _uiState.value.searchType, // No es usado por el UseCase provisto
-                    ingredientsListFromUiState = _uiState.value.initialIngredients, // Pasamos la List<String>?
+            ScreenDisplayMode.API_COMPLEX_SEARCH -> {
+                fetchComplexRemoteRecipes(
+                    ingredientsFromUiState = _uiState.value.initialIngredients?.joinToString(","),
                     cuisineFromUiState = _uiState.value.initialCuisine,
-                    // rankingFromUiState = _uiState.value.initialRanking, // No es usado por el UseCase provisto
                     isInitialLoad = true
                 )
             }
-            RecipeListMode.FAVORITE_RECIPES -> {
+
+            ScreenDisplayMode.API_BY_INGREDIENTS_SEARCH -> {
+                val ingredientsList = _uiState.value.initialIngredients
+                val ranking = _uiState.value.initialRanking // Ya es Int?
+                if (!ingredientsList.isNullOrEmpty() && ranking != null) {
+                    fetchRecipesByIngredients(
+                        ingredientsList = ingredientsList,
+                        ranking = ranking,
+                        isInitialLoad = true
+                    )
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            isLoadingInitial = false,
+                            error = "Faltan ingredientes o ranking para este tipo de búsqueda.",
+                            noResults = true
+                        )
+                    }
+                }
+            }
+
+            ScreenDisplayMode.LOCAL_FAVORITES -> {
                 observeFavoriteRecipes()
             }
         }
     }
 
-    fun fetchRemoteRecipes(
-        // searchTypeFromUiState: String, // No es usado por el UseCase provisto
-        ingredientsListFromUiState: List<String>?, // Ahora es List<String>?
+    private fun fetchComplexRemoteRecipes(
+        ingredientsFromUiState: String?,
         cuisineFromUiState: String?,
-        // rankingFromUiState: Int?, // No es usado por el UseCase provisto
         isInitialLoad: Boolean = true
     ) {
-        if (_uiState.value.isLoadingInitial || _uiState.value.isLoadingMore) {
-            Log.d(TAG, "fetchRemoteRecipes: Already loading, skipping.")
-            return
-        }
-
+        if (_uiState.value.isLoadingInitial || _uiState.value.isLoadingMore) return
         val currentOffsetToUse = if (isInitialLoad) 0 else _uiState.value.currentOffset
         val numberToFetch = _uiState.value.numberPerPage
-
-        Log.d(TAG, "fetchRemoteRecipes: IngList: $ingredientsListFromUiState, Cui: $cuisineFromUiState, Offset: $currentOffsetToUse, Initial: $isInitialLoad")
 
         viewModelScope.launch {
             _uiState.update {
@@ -100,43 +108,78 @@ class ShowRecipesViewModel(
                     noResults = false
                 )
             }
-
-            // --- ADAPTACIÓN DE PARÁMETROS PARA searchComplexRecipesUseCase ---
-            // Los parámetros 'searchType' y 'ranking' de la navegación
-            // no son utilizados por la firma actual de SearchComplexRecipesUseCase.
-            // Si fueran necesarios para seleccionar diferentes endpoints o lógicas de ordenación
-            // más complejas, el UseCase o el Repositorio tendrían que manejarlo.
-
-            Log.d(TAG, "Calling UseCase with: includeIngredients=$ingredientsListFromUiState, cuisine=$cuisineFromUiState, offset=$currentOffsetToUse, number=$numberToFetch")
-
             val result = searchComplexRecipesUseCase(
-                includeIngredients = ingredientsListFromUiState, // Directamente la List<String>?
-                cuisine = cuisineFromUiState,                   // Directamente el String?
+                includeIngredients = ingredientsFromUiState?.split(',')?.map { it.trim() }
+                    ?.filter { it.isNotEmpty() },
+                cuisine = cuisineFromUiState,
                 offset = currentOffsetToUse,
                 number = numberToFetch
             )
-            // FIN DE ADAPTACIÓN DE PARÁMETROS
-
             result.onSuccess { newRecipes ->
-                Log.d(TAG, "fetchRemoteRecipes: Success, ${newRecipes.size} recipes received.")
                 _uiState.update { currentState ->
-                    val allRecipes = if (isInitialLoad) newRecipes else currentState.recipes + newRecipes
+                    val allRecipes =
+                        if (isInitialLoad) newRecipes else currentState.recipes + newRecipes
                     currentState.copy(
-                        isLoadingInitial = false,
-                        isLoadingMore = false,
-                        recipes = allRecipes,
+                        isLoadingInitial = false, isLoadingMore = false, recipes = allRecipes,
                         currentOffset = currentOffsetToUse + newRecipes.size,
                         canLoadMore = newRecipes.size == numberToFetch,
                         noResults = isInitialLoad && newRecipes.isEmpty()
                     )
                 }
             }.onFailure { exception ->
-                Log.e(TAG, "fetchRemoteRecipes: Failure", exception)
                 _uiState.update {
                     it.copy(
                         isLoadingInitial = false,
                         isLoadingMore = false,
-                        error = exception.message ?: "Error al cargar recetas de la API",
+                        error = exception.message ?: "Error API (Complex)",
+                        noResults = isInitialLoad
+                    )
+                }
+            }
+        }
+    }
+
+    private fun fetchRecipesByIngredients(
+        ingredientsList: List<String>,
+        ranking: Int,
+        isInitialLoad: Boolean = true
+    ) {
+        if (_uiState.value.isLoadingInitial || _uiState.value.isLoadingMore) return
+        val currentOffsetToUse = if (isInitialLoad) 0 else _uiState.value.currentOffset
+        val numberToFetch = _uiState.value.numberPerPage
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isLoadingInitial = isInitialLoad,
+                    isLoadingMore = !isInitialLoad,
+                    error = null,
+                    noResults = false
+                )
+            }
+            val result = searchRecipesByIngredientsUseCase(
+                includeIngredients = ingredientsList,
+                ranking = ranking,
+                offset = currentOffsetToUse,
+                number = numberToFetch
+            )
+            result.onSuccess { newRecipes ->
+                _uiState.update { currentState ->
+                    val allRecipes =
+                        if (isInitialLoad) newRecipes else currentState.recipes + newRecipes
+                    currentState.copy(
+                        isLoadingInitial = false, isLoadingMore = false, recipes = allRecipes,
+                        currentOffset = currentOffsetToUse + newRecipes.size,
+                        canLoadMore = newRecipes.size == numberToFetch,
+                        noResults = isInitialLoad && newRecipes.isEmpty()
+                    )
+                }
+            }.onFailure { exception ->
+                _uiState.update {
+                    it.copy(
+                        isLoadingInitial = false,
+                        isLoadingMore = false,
+                        error = exception.message ?: "Error API (ByIngredients)",
                         noResults = isInitialLoad
                     )
                 }
@@ -145,15 +188,18 @@ class ShowRecipesViewModel(
     }
 
     private fun observeFavoriteRecipes() {
-        Log.d(TAG, "observeFavoriteRecipes: Starting to observe.")
         viewModelScope.launch {
             getFavoriteRecipesStreamUseCase()
                 .onStart {
-                    Log.d(TAG, "observeFavoriteRecipes: Flow onStart.")
-                    _uiState.update { it.copy(isLoadingInitial = true, error = null, noResults = false) }
+                    _uiState.update {
+                        it.copy(
+                            isLoadingInitial = true,
+                            error = null,
+                            noResults = false
+                        )
+                    }
                 }
                 .catch { e ->
-                    Log.e(TAG, "observeFavoriteRecipes: Flow error", e)
                     _uiState.update {
                         it.copy(
                             isLoadingInitial = false,
@@ -163,14 +209,10 @@ class ShowRecipesViewModel(
                     }
                 }
                 .collect { favoriteRecipes ->
-                    Log.d(TAG, "observeFavoriteRecipes: Flow collected ${favoriteRecipes.size} recipes.")
                     _uiState.update {
                         it.copy(
-                            isLoadingInitial = false,
-                            recipes = favoriteRecipes,
-                            error = null,
-                            canLoadMore = false,
-                            noResults = favoriteRecipes.isEmpty()
+                            isLoadingInitial = false, recipes = favoriteRecipes, error = null,
+                            canLoadMore = false, noResults = favoriteRecipes.isEmpty()
                         )
                     }
                 }
@@ -179,27 +221,45 @@ class ShowRecipesViewModel(
 
     fun loadMoreRecipes() {
         val currentState = _uiState.value
-        if (currentState.canLoadMore && !currentState.isLoadingInitial && !currentState.isLoadingMore &&
-            RecipeListMode.valueOf(savedStateHandle[NavArgs.SCREEN_MODE] ?: RecipeListMode.ALL_RECIPES.name) == RecipeListMode.ALL_RECIPES) {
-            Log.d(TAG, "loadMoreRecipes: Triggered.")
-            fetchRemoteRecipes(
-                // searchTypeFromUiState = currentState.searchType, // No es usado por el UseCase provisto
-                ingredientsListFromUiState = currentState.initialIngredients,
-                cuisineFromUiState = currentState.initialCuisine,
-                // rankingFromUiState = currentState.initialRanking, // No es usado por el UseCase provisto
-                isInitialLoad = false
-            )
-        } else {
-            Log.d(TAG, "loadMoreRecipes: Cannot load more. CanLoadMore: ${currentState.canLoadMore}, IsLoading: ${currentState.isLoadingInitial || currentState.isLoadingMore}")
+        val currentScreenDisplayMode: ScreenDisplayMode = ScreenDisplayMode.valueOf(
+            savedStateHandle[NavArgs.SCREEN_MODE] ?: ScreenDisplayMode.API_COMPLEX_SEARCH.name
+        )
+
+        if (currentState.canLoadMore && !currentState.isLoadingInitial && !currentState.isLoadingMore) {
+            when (currentScreenDisplayMode) {
+                ScreenDisplayMode.API_COMPLEX_SEARCH -> {
+                    fetchComplexRemoteRecipes(
+                        ingredientsFromUiState = currentState.initialIngredients?.joinToString(","),
+                        cuisineFromUiState = currentState.initialCuisine,
+                        isInitialLoad = false
+                    )
+                }
+
+                ScreenDisplayMode.API_BY_INGREDIENTS_SEARCH -> {
+                    val ingredientsList = currentState.initialIngredients
+                    val ranking = currentState.initialRanking
+                    if (!ingredientsList.isNullOrEmpty() && ranking != null) {
+                        fetchRecipesByIngredients(
+                            ingredientsList = ingredientsList,
+                            ranking = ranking,
+                            isInitialLoad = false
+                        )
+                    } else {
+                        _uiState.update { it.copy(canLoadMore = false) }
+                    }
+                }
+
+                ScreenDisplayMode.LOCAL_FAVORITES -> {
+                }
+            }
         }
     }
 
     fun retryLoad() {
-        Log.d(TAG, "retryLoad: Triggered.")
-        val currentScreenMode: RecipeListMode = RecipeListMode.valueOf(
-            savedStateHandle[NavArgs.SCREEN_MODE] ?: RecipeListMode.ALL_RECIPES.name
+        val currentScreenDisplayMode: ScreenDisplayMode = ScreenDisplayMode.valueOf(
+            savedStateHandle[NavArgs.SCREEN_MODE] ?: ScreenDisplayMode.API_COMPLEX_SEARCH.name
         )
-        _uiState.update { it.copy(currentOffset = 0, recipes = emptyList()) } // Reset para carga inicial
-        loadContentBasedOnMode(currentScreenMode)
+        _uiState.update { it.copy(currentOffset = 0, recipes = emptyList()) }
+        loadContentBasedOnMode(currentScreenDisplayMode)
     }
 }

@@ -1,6 +1,10 @@
 package com.example.cookhelpapp.presentation.composable
 
-
+// Quita los imports de Scaffold, TopAppBar, TopAppBarDefaults, Icons, IconButton si ya no se usan en otras partes del archivo.
+// import androidx.compose.material.icons.Icons
+// import androidx.compose.material.icons.automirrored.filled.ArrowBack
+// import androidx.compose.material3.Icon
+// import androidx.compose.material3.IconButton
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,9 +31,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.cookhelpapp.domain.model.RecipeSummary
@@ -38,8 +43,9 @@ import com.example.cookhelpapp.presentation.viewmodel.ShowRecipesViewModel
 import org.koin.androidx.compose.koinViewModel
 
 /**
- * Pantalla que muestra la lista de resultados de búsqueda de recetas.
+ * Pantalla que muestra la lista de resultados de búsqueda de recetas o favoritos.
  * Permite hacer clic en un item para navegar a la pantalla de detalle.
+ * El título de la pantalla es dinámico y se muestra en la parte superior.
  *
  * @param navController Controlador de navegación para ir a otras pantallas.
  * @param modifier Modificador Compose estándar.
@@ -49,7 +55,7 @@ import org.koin.androidx.compose.koinViewModel
 fun ShowRecipesScreen(
     modifier: Modifier = Modifier,
     viewModel: ShowRecipesViewModel = koinViewModel(),
-    navController: NavController
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
@@ -57,52 +63,81 @@ fun ShowRecipesScreen(
     // --- Estructura Principal de la Pantalla ---
     Column(
         modifier = modifier
-            .padding(16.dp)
             .fillMaxSize()
+            .padding(16.dp)
     ) {
-        // Título de la pantalla (podría ser dinámico según uiState.searchType o filtros)
+        // Título dinámico de la pantalla
         Text(
-            text = "Recetas Encontradas", // O un título más dinámico
+            text = uiState.screenTitle,
             style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            textAlign = TextAlign.Center
         )
 
-        // Mensaje si no hay resultados (después de que la carga inicial termine sin error)
-        if (uiState.noResults && !uiState.isLoadingInitial && uiState.error == null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        // Muestra un indicador de carga si isLoadingInitial es true
+        if (uiState.isLoadingInitial) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        // Mensaje de error
+        else if (uiState.error != null) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(
-                    "No se encontraron recetas para los filtros seleccionados.",
-                    style = MaterialTheme.typography.bodyLarge
+                    "Error: ${uiState.error}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+        // Mensaje si no hay resultados
+        else if (uiState.noResults) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "No se encontraron recetas.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(16.dp)
                 )
             }
         }
 
         // --- Lista de Resultados ---
-        // Se muestra solo si no hay carga inicial O si ya hay recetas (para paginación)
-        // Y si no hay error que impida mostrar la lista.
-        if ((!uiState.isLoadingInitial || uiState.recipes.isNotEmpty()) && uiState.error == null && !uiState.noResults) {
+        else if (uiState.recipes.isNotEmpty() || !uiState.isLoadingInitial) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.weight(1f), // Para que ocupe el espacio restante si hay otros elementos
-                verticalArrangement = Arrangement.spacedBy(8.dp) // Espacio entre tarjetas
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Renderiza cada item de receta de la lista actual en el estado
                 items(
                     items = uiState.recipes,
-                    key = { recipe -> recipe.id } // Key única para cada item (ayuda a Compose)
-                ) { recipe -> RecipeItem(
+                    key = { recipe -> recipe.id }
+                ) { recipe ->
+                    RecipeItem(
                         recipe = recipe,
-                        onItemClick = { recipeId -> navController.navigate(Screen.RecipeDetail.createRoute(recipeId)) }
-                    ) // Llama al Composable que dibuja cada item
+                        onItemClick = { recipeId ->
+                            navController.navigate(Screen.RecipeDetail.createRoute(recipeId))
+                        }
+                    )
                 }
 
-                // Añade un item al final para mostrar el indicador de carga "más"
                 item {
                     if (uiState.isLoadingMore) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(vertical = 16.dp), // Padding vertical para el indicador
                             horizontalArrangement = Arrangement.Center
                         ) {
                             CircularProgressIndicator()
@@ -114,48 +149,30 @@ fun ShowRecipesScreen(
     }
 
     // --- Lógica Reactiva para Paginación (Scroll Infinito) ---
-
-    // Calcula si se debería cargar más basado en el estado del scroll y el estado de la UI
     val shouldLoadMore = remember {
-        derivedStateOf { // Se recalcula eficientemente solo cuando sus dependencias cambian
-            val layoutInfo = listState.layoutInfo // Información sobre los items visibles
-            val totalItemsInList =
-                layoutInfo.totalItemsCount // Total de items actualmente en LazyColumn
-
-            // No cargar si:
-            // - La lista está vacía (la carga inicial aún no trae nada o no hay resultados).
-            // - El ViewModel indica que ya no hay más (`!uiState.canLoadMore`).
-            // - Ya se está cargando algo (`uiState.isLoadingMore` o `uiState.isLoadingInitial`).
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val totalItemsInList = layoutInfo.totalItemsCount
             if (totalItemsInList == 0 || !uiState.canLoadMore || uiState.isLoadingMore || uiState.isLoadingInitial) {
                 false
             } else {
-                // Índice del último item visible en pantalla
                 val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-
-                // Umbral para disparar la carga (ej: cuando queden N items o menos por debajo para ver)
                 val loadMoreThreshold = totalItemsInList - 5
-
-                // Cargar más si el último item visible ha superado el umbral
                 lastVisibleItemIndex >= loadMoreThreshold
             }
         }
     }
 
-    // Efecto que se dispara cuando el valor de `shouldLoadMore.value` cambia a true
     LaunchedEffect(shouldLoadMore.value) {
         if (shouldLoadMore.value) {
             viewModel.loadMoreRecipes()
         }
     }
-
 }
 
 /**
  * Composable simple para mostrar la información de un [RecipeSummary] en una tarjeta.
- * Muestra la imagen y el título de la receta.
- *
- * @param recipe El resumen de la receta [RecipeSummary] a mostrar.
- * @param modifier Modificador Compose estándar.
+ * (Se mantiene igual que tu versión anterior)
  */
 @Composable
 fun RecipeItem(recipe: RecipeSummary, modifier: Modifier = Modifier, onItemClick: (Int) -> Unit) {
@@ -163,29 +180,28 @@ fun RecipeItem(recipe: RecipeSummary, modifier: Modifier = Modifier, onItemClick
         modifier = modifier
             .fillMaxWidth()
             .clickable { onItemClick(recipe.id) },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) // Sombra ligera
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(8.dp)
+            modifier = Modifier.padding(12.dp)
         ) {
-            // Imagen de la receta usando Coil
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(recipe.imageUrl) // URL de la imagen
-                    .crossfade(true) // Efecto de fundido suave
+                    .data(recipe.imageUrl)
+                    .crossfade(true)
                     .build(),
                 contentDescription = "Imagen de ${recipe.title}",
                 modifier = Modifier
-                    .size(88.dp) // Tamaño de la imagen
-                    .padding(end = 8.dp), // Espacio a la derecha de la imagen
-                contentScale = ContentScale.Crop // Escala la imagen para llenar el espacio manteniendo aspecto
+                    .size(100.dp)
+                    .padding(end = 12.dp),
+                contentScale = ContentScale.Crop
             )
-            // Título de la receta
             Text(
                 text = recipe.title,
-                style = MaterialTheme.typography.titleMedium, // Estilo de texto
-                modifier = Modifier.weight(1f) // Ocupa el espacio restante en la fila
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
             )
         }
     }

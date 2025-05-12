@@ -31,5 +31,6 @@ data class ShowRecipesUiState(
     val initialIngredients: List<String>? = null,
     val initialCuisine: String? = null,
     val initialRanking: Int? = null,
-    val noResults: Boolean = false // Para mostrar un mensaje si la lista está vacía después de cargar
+    val noResults: Boolean = false,
+    val screenTitle: String = "Recetas"
 )

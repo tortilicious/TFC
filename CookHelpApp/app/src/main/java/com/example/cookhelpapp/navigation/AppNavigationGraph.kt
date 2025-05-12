@@ -30,25 +30,29 @@ fun AppNavigationGraph() {
         }
 
         composable(route = Screen.NewRecipesInput.route) {
-            // RecipeSearchScreen recogerá los filtros y navegará a ShowRecipesScreen
-            // usando Screen.ShowRecipes.createRoute(mode = RecipeListMode.ALL_RECIPES, ...)
+            // Esta pantalla recoge filtros para API_COMPLEX_SEARCH
             RecipeSearchScreen(navController = navController)
+        }
+
+        composable(route = Screen.ZeroWasteRecipesInput.route) {
+            // Esta pantalla recogerá ingredientes y ranking para API_BY_INGREDIENTS_SEARCH
+            // Deberás crear esta pantalla, similar a RecipeSearchScreen.
+            // Por ahora, un placeholder:
+            PlaceholderScreen(screenName = "Entrada Aprovechamiento (ZeroWasteInputScreen)")
+            // Ejemplo de cómo sería:
+            // ZeroWasteInputScreen(navController = navController)
         }
 
         // Ruta actualizada para ShowRecipesScreen
         composable(
-            route = Screen.ShowRecipes.route + "/{${NavArgs.SCREEN_MODE}}" + // screenMode como path param
-                    "?${NavArgs.SEARCH_TYPE}={${NavArgs.SEARCH_TYPE}}" +
-                    "&${NavArgs.INGREDIENTS}={${NavArgs.INGREDIENTS}}" +
+            route = Screen.ShowRecipes.route + "/{${NavArgs.SCREEN_MODE}}" + // screenDisplayMode como path param
+                    "?${NavArgs.INGREDIENTS}={${NavArgs.INGREDIENTS}}" +
                     "&${NavArgs.CUISINE}={${NavArgs.CUISINE}}" +
-                    "&${NavArgs.RANKING}={${NavArgs.RANKING}}",
+                    "&${NavArgs.RANKING}={${NavArgs.RANKING}}", // Ranking como String
             arguments = listOf(
-                navArgument(NavArgs.SCREEN_MODE) { type = NavType.StringType }, // Obligatorio
-                navArgument(NavArgs.SEARCH_TYPE) { // Opcional
+                navArgument(NavArgs.SCREEN_MODE) {
                     type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
+                }, // Obligatorio, será un nombre del enum ScreenDisplayMode
                 navArgument(NavArgs.INGREDIENTS) { // Opcional
                     type = NavType.StringType
                     nullable = true
@@ -59,38 +63,30 @@ fun AppNavigationGraph() {
                     nullable = true
                     defaultValue = null
                 },
-                navArgument(NavArgs.RANKING) { // Opcional
+                navArgument(NavArgs.RANKING) { // Opcional, se pasa como String
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
                 }
             )
         ) {
-            // El ShowRecipesViewModel se inyectará (ej. con hiltViewModel())
-            // y leerá los argumentos del SavedStateHandle.
             ShowRecipesScreen(navController = navController)
         }
 
-
-        composable(route = Screen.ZeroWasteRecipesInput.route) {
-            PlaceholderScreen(screenName = "Aprovechamiento de Ingredientes")
-        }
         composable(route = Screen.ShoppingListScreen.route) {
             PlaceholderScreen(screenName = "Lista de la Compra")
         }
 
         composable(
-            route = Screen.RecipeDetail.route, // Definido como "recipe_detail_screen/{recipeId}"
+            route = Screen.RecipeDetail.route,
             arguments = listOf(navArgument(NavArgs.RECIPE_ID) { type = NavType.IntType })
         ) {
-            // RecipeDetailViewModel accederá a recipeId a través de SavedStateHandle
             RecipeDetailScreen(navController = navController)
         }
     }
 }
 
-// --- Funciones de extensión para NavController (opcional pero útil) ---
-// Estas funciones se pueden colocar en un archivo separado dentro del paquete de navegación.
+// --- Funciones de extensión para NavController (actualizadas) ---
 
 fun NavHostController.navigateToMainMenu() {
     this.navigate(Screen.MainMenu.route) {
@@ -98,31 +94,55 @@ fun NavHostController.navigateToMainMenu() {
     }
 }
 
+/** Navega a la pantalla de entrada para búsqueda compleja (nuevas recetas). */
 fun NavHostController.navigateToNewRecipesInput() {
     this.navigate(Screen.NewRecipesInput.route)
 }
 
+/** Navega a la pantalla de entrada para búsqueda por ingredientes (aprovechamiento). */
+fun NavHostController.navigateToZeroWasteInput() {
+    this.navigate(Screen.ZeroWasteRecipesInput.route)
+}
+
 /**
- * Navega a la pantalla ShowRecipes con el modo y parámetros especificados.
+ * Navega a la pantalla ShowRecipes para búsqueda compleja.
  */
-fun NavHostController.navigateToShowRecipes(
-    mode: RecipeListMode,
-    searchType: String? = null,
-    ingredients: String? = null,
-    cuisine: String? = null,
-    ranking: String? = null // Mantener como String para la ruta
+fun NavHostController.navigateToShowRecipesComplexSearch(
+    ingredients: String?,
+    cuisine: String?
 ) {
-    val route = Screen.ShowRecipes.createRoute(mode, searchType, ingredients, cuisine, ranking)
+    val route = Screen.ShowRecipes.createRoute(
+        mode = ScreenDisplayMode.API_COMPLEX_SEARCH,
+        ingredients = ingredients,
+        cuisine = cuisine
+
+    )
     this.navigate(route)
+}
+
+/**
+ * Navega a la pantalla ShowRecipes para búsqueda por ingredientes.
+ */
+fun NavHostController.navigateToShowRecipesByIngredientsSearch(
+    ingredients: String, // Requerido para esta búsqueda
+    ranking: String // Requerido para esta búsqueda (ej. "1" o "2")
+) {
+    val route = Screen.ShowRecipes.createRoute(
+        mode = ScreenDisplayMode.API_BY_INGREDIENTS_SEARCH,
+        ingredients = ingredients,
+        ranking = ranking
+        // cuisine no es relevante para byIngredients search en este ejemplo
+    )
+    this.navigate(route)
+}
+
+/**
+ * Navega a ShowRecipesScreen en modo LOCAL_FAVORITES.
+ */
+fun NavHostController.navigateToFavorites() {
+    this.navigate(Screen.ShowRecipes.createRoute(mode = ScreenDisplayMode.LOCAL_FAVORITES))
 }
 
 fun NavHostController.navigateToRecipeDetail(recipeId: Int) {
     this.navigate(Screen.RecipeDetail.createRoute(recipeId))
-}
-
-/**
- * Navega a ShowRecipesScreen en modo FAVORITE_RECIPES.
- */
-fun NavHostController.navigateToFavorites() {
-    this.navigate(Screen.ShowRecipes.createRoute(mode = RecipeListMode.FAVORITE_RECIPES))
 }

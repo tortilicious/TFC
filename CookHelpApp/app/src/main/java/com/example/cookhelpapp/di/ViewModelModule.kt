@@ -28,9 +28,10 @@ val viewModelModule = module {
      */
     viewModel { params ->
         ShowRecipesViewModel(
-            savedStateHandle = params.get(),                // Koin provee el SavedStateHandle
-            searchComplexRecipesUseCase = get(),            // Koin busca y provee SearchComplexRecipesUseCase
-            getFavoriteRecipesStreamUseCase = get()         // Koin busca y provee GetFavoriteRecipesStreamUseCase (CAMBIADO AQUÍ)
+            savedStateHandle = params.get(),
+            searchComplexRecipesUseCase = get(),
+            getFavoriteRecipesStreamUseCase = get(),
+            searchRecipesByIngredientsUseCase = get()
         )
     }
 
